@@ -1,0 +1,2 @@
+# multiplayer.nvim
+Cooperative editing
