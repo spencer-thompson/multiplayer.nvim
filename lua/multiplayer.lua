@@ -81,7 +81,7 @@ M.setup = function(opts)
 			vim.print(M.events)
 		end
 		if args.fargs[1] == "test" then
-			require("connection")
+			-- require("connection")
 
 			-- M.channel_id = vim.fn.sockconnect("tcp", "localhost:5111", {
 			-- 	on_data = function()
@@ -114,6 +114,10 @@ M.setup = function(opts)
 					-- vim.print(vim.api.nvim_win_get_cursor(0))
 					-- vim.api.nvim_chan_send()
 					-- vim.validate
+				end,
+				on_bytes = function(by, buf, ct, srt, sct, boc, oer, oec, oeb, ner, nec, neb)
+					vim.print(by, buf, ct, srt, sct, boc, oer, oec, oeb, ner, nec, neb)
+					vim.print(vim.api.nvim_buf_get_text(0, oer, oec, ner, nec, {}))
 				end,
 			})
 		end
