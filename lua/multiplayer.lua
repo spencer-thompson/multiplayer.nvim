@@ -14,8 +14,6 @@ M.curpos = { 1, 1 }
 
 M.cursor_ns_id = vim.api.nvim_create_namespace("MultiplayerCursor")
 
-M.autocmd_group = vim.api.nvim_create_augroup("Multiplayer Tracking", { clear = true })
-
 M.setup = function(opts)
 	-- highlight groups | see :h guifg
 	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor1", { fg = "NvimLightBlue" })
@@ -25,9 +23,17 @@ M.setup = function(opts)
 	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor5", { fg = "NvimLightRed" })
 	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor6", { fg = "NvimLightYellow" })
 
+	-- M.username = vim.api.nvim_cmd({ "git", "config", "user.name" }, { output = true })
+	M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
+	M.username = vim.trim(M.username)
+
 	vim.api.nvim_create_user_command("Multiplayer", function(args)
 		if args.fargs[1] == "connect" then
-			M.channel_id = vim.fn.sockconnect("tcp", "localhost:5111", { rpc = true })
+			M.channel_id = vim.fn.sockconnect("tcp", "localhost:5112", { rpc = true })
+			local conn = require("connection")
+			-- conn.send_data(M.username .. "\n")
+			vim.rpcnotify(M.channel_id, "user", M.username)
+
 			-- get every buffer
 			-- check if buffer is "in" git repo
 			-- first to connect set git ref
@@ -42,23 +48,32 @@ M.setup = function(opts)
 					-- vim.validate
 				end,
 			})
+
+			M.autocmd_group = vim.api.nvim_create_augroup("Multiplayer Tracking", { clear = true })
 			vim.api.nvim_create_autocmd("CursorMoved", {
 				desc = "Track Cursor Movement",
 				pattern = "*.md", -- for now
 				group = M.autocmd_group,
 				callback = function()
-					vim.print(vim.api.nvim_win_get_cursor(0))
-					vim.api.nvim_buf_clear_namespace(0, M.ns_id, 0, -1)
-					M.curpos = vim.api.nvim_win_get_cursor(0)
-					vim.api.nvim_buf_add_highlight(
-						0,
-						M.ns_id,
-						"IncSearch",
-						M.curpos[1] - 1,
-						M.curpos[2],
-						M.curpos[2] + 1
-					)
-					vim.api.nvim_buf_set_extmark(0, M.ns_id, M.curpos[1], M.curpos[2], { end_col = M.curpos[2] + 1 })
+					local curpos = vim.api.nvim_win_get_cursor(0)
+					vim.rpcnotify(M.channel_id, "cursor", M.username, curpos[1], curpos[2])
+					-- if (#vim.api.nvim_win_get_cursor(0)) < 2 then
+					-- 	return
+					-- else
+					-- 	vim.print(table.concat(vim.api.nvim_win_get_cursor(0), ","))
+					-- 	conn.send_data(M.username .. "," .. table.concat(vim.api.nvim_win_get_cursor(0), ",") .. "\n")
+					-- end
+					-- vim.api.nvim_buf_clear_namespace(0, M.ns_id, 0, -1)
+					-- M.curpos = vim.api.nvim_win_get_cursor(0)
+					-- vim.api.nvim_buf_add_highlight(
+					-- 	0,
+					-- 	M.ns_id,
+					-- 	"IncSearch",
+					-- 	M.curpos[1] - 1,
+					-- 	M.curpos[2],
+					-- 	M.curpos[2] + 1
+					-- )
+					-- vim.api.nvim_buf_set_extmark(0, M.ns_id, M.curpos[1], M.curpos[2], { end_col = M.curpos[2] + 1 })
 				end,
 			})
 		end
@@ -66,15 +81,27 @@ M.setup = function(opts)
 			vim.print(M.events)
 		end
 		if args.fargs[1] == "test" then
-			M.channel_id = vim.fn.sockconnect("tcp", "localhost:5111", { rpc = true })
+			require("connection")
+
+			-- M.channel_id = vim.fn.sockconnect("tcp", "localhost:5111", {
+			-- 	on_data = function()
+			-- 		vim.print("Triggered on data")
+			-- 	end,
+			-- 	rpc = true,
+			-- })
 			-- local channel_id = vim.fn.sockconnect("tcp", "localhost:5111")
+
+			-- vim.rpcnotify(M.channel_id, "cursor", M.username, vim.api.nvim_win_get_cursor(0))
+			-- vim.print(vim.rpcrequest(M.channel_id, "something"))
+
+			-- vim.rpcnotify(M.channel_id, "HandleRequest", M.username, vim.api.nvim_win_get_cursor(0))
 			vim.api.nvim_buf_attach(0, false, {
 
 				on_lines = function(lines, buf, ct, fl, ll, ld, m)
 					-- table.insert(M.events, { ... })
 					-- vim.print(args)
 
-					vim.rpcnotify(M.channel_id, "something", vim.api.nvim_buf_get_lines(buf, fl, ld, true))
+					-- vim.rpcnotify(M.channel_id, "something", vim.api.nvim_buf_get_lines(buf, fl, ld, true))
 					-- vim.fn.chansend(M.channel_id, vim.api.nvim_buf_get_lines(buf, fl, ld, true))
 
 					-- for i, s in vim.api.nvim_buf_get_lines(buf, fl, ld, true) do
