@@ -1,5 +1,3 @@
-local job = require("plenary.job")
-
 local M = {}
 
 M.events = {}
@@ -9,28 +7,7 @@ M.curpos = { 1, 1 }
 M.cursor_ns_id = vim.api.nvim_create_namespace("MultiplayerCursor")
 
 M.setup = function(opts)
-	local websocket = job:new({
-		command = "websocat",
-		args = {
-			"ws://",
-		},
-		cwd = vim.fn.getcwd(),
-		on_stdout = function(error, data)
-			if error then
-				vim.api.nvim_err_writeln(error)
-			else
-				print("STDOUT: ", data) -- Handle standard output
-			end
-		end,
-		on_stderr = function(error, data)
-			if error then
-				vim.api.nvim_err_writeln(error)
-				print(error)
-			else
-				print("Error", data) -- Handle standard error
-			end
-		end,
-	})
+	M.socket_address = vim.fn.serverstart("websocket")
 
 	-- highlight groups | see :h guifg
 	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor1", { fg = "NvimLightBlue" })
@@ -44,8 +21,7 @@ M.setup = function(opts)
 	M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
 	M.username = vim.trim(M.username)
 
-	vim.api.nvim_create_user_command("Multiplayer", function(args)
-		vim.cmd([[echo "hello world"]])
+	vim.api.nvim_create_user_command("Multi", function(args)
 		if args.fargs[1] == "connect" then
 			M.channel_id = vim.fn.sockconnect("tcp", "localhost:5112", { rpc = true })
 			local conn = require("connection")
@@ -99,49 +75,67 @@ M.setup = function(opts)
 			vim.print(M.events)
 		end
 		if args.fargs[1] == "test" then
-			-- M.channel_id = vim.fn.sockconnect("pipe", "localhost:5112", { rpc = true })
-			-- can we use just a plenary job as a channel?
-			-- require("connection")
+			-- M.websocket:start()
+			local websocket_send = vim.system(
+				{ "websocat", "ws://localhost:1234" },
+				{ text = false, stdin = true },
+				function(obj)
+					vim.cmd([[echo "closed"]])
+				end
+			)
 
-			-- M.channel_id = vim.fn.sockconnect("tcp", "localhost:5111", {
-			-- 	on_data = function()
-			-- 		vim.print("Triggered on data")
-			-- 	end,
-			-- 	rpc = true,
-			-- })
-			-- local channel_id = vim.fn.sockconnect("tcp", "localhost:5111")
+			vim.system({ "websocat", "ws://localhost:1235" }, {
+				text = false,
+				stdin = true,
+				stdout = function(err, data)
+					vim.print(err)
+					vim.print(data)
+					-- vim.print({ data })
+				end,
+			}, function()
+				vim.cmd([[echo "recieve closed"]])
+			end)
+			-- M.websocket:start()
 
-			-- vim.rpcnotify(M.channel_id, "cursor", M.username, vim.api.nvim_win_get_cursor(0))
-			-- vim.print(vim.rpcrequest(M.channel_id, "something"))
+			M.autocmd_group = vim.api.nvim_create_augroup("Multiplayer Tracking", { clear = true })
+			vim.api.nvim_create_autocmd("CursorMoved", {
+				desc = "Track Cursor Movement",
+				pattern = "*", -- for now
+				group = M.autocmd_group,
+				callback = function()
+					local curpos = vim.api.nvim_win_get_cursor(0)
 
-			-- vim.rpcnotify(M.channel_id, "HandleRequest", M.username, vim.api.nvim_win_get_cursor(0))
+					local encoded_pos = vim.json.encode({ cur = { row = curpos[1], col = curpos[2] } })
+					-- vim.print(encoded_pos)
+					websocket_send:write({ encoded_pos })
+				end,
+			})
+
 			vim.api.nvim_buf_attach(0, false, {
 
 				-- on_lines = function(lines, buf, ct, fl, ll, ld, m)
-				on_lines = function(...)
-					table.insert(M.events, { ... })
-				end,
-				-- vim.print(args)
-
-				-- vim.rpcnotify(M.channel_id, "something", vim.api.nvim_buf_get_lines(buf, fl, ld, true))
-				-- vim.fn.chansend(M.channel_id, vim.api.nvim_buf_get_lines(buf, fl, ld, true))
-
-				-- for i, s in vim.api.nvim_buf_get_lines(buf, fl, ld, true) do
-				-- vim.api.nvim_chan_send(channel_id, s)
-				-- vim.api.nvim_chan_send(M.channel_id, s)
-				-- end
-
-				-- vim.api.nvim_chan_send(M.channel_id, vim.api.nvim_buf_get_lines(buf, fl, ld, true))
-				-- vim.print(vim.api.nvim_buf_get_lines(buf, fl, ld, true))
-				-- vim.print(vim.api.nvim_win_get_cursor(0))
-				-- vim.api.nvim_chan_send()
-				-- vim.validate
-				-- on_bytes = function(by, buf, ct, srt, sct, boc, oer, oec, oeb, ner, nec, neb)
-				-- 	vim.print(by, buf, ct, srt, sct, boc, oer, oec, oeb, ner, nec, neb)
-				-- 	vim.print(vim.api.nvim_buf_get_text(0, oer, oec, ner, nec, {}))
-				-- on_bytes = function(...)
+				-- on_lines = function(...)
+				-- 	-- vim.rpcnotify(M.channel_id, "on_lines", { ... })
+				-- 	-- M.websocket:send({ ... })
+				-- 	local encoded_data = vim.json.encode({ ... })
+				-- 	websocket_send:write({ encoded_data })
 				-- 	table.insert(M.events, { ... })
 				-- end,
+				on_bytes = function(byt, buf, ct, sr, sc, bo, oR, oc, ob, nr, nc, nb)
+					-- local encoded_data = vim.json.encode({ ... })
+
+					websocket_send:write({ vim.json.encode({ sr, sc, oR, oc, nr, nc }) })
+					if nr < oR or nc < oc then
+						local encoded_data = vim.json.encode({ del = { row = { sr, sr - oR }, col = { sc, sc - oc } } })
+						websocket_send:write({ encoded_data })
+					else
+						local new_text = vim.api.nvim_buf_get_text(buf, sr, sc, sr + nr, sc + nc, {})
+						local encoded_data =
+							vim.json.encode({ text = new_text, row = { sr, sr + nr }, col = { sc, sc + nc } })
+						websocket_send:write({ encoded_data })
+					end
+					-- table.insert(M.events, { ... })
+				end,
 			})
 		end
 		-- if opts.fargs[1] == "disconnect" then
