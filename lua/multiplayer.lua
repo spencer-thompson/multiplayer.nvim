@@ -1,12 +1,6 @@
+local job = require("plenary.job")
+
 local M = {}
-
--- function M.hello_world()
--- 	vim.print("hello world")
--- end
-
--- function M.setup(opts)
--- 	vim.api.nvim_create_user_command("Multiplayer", M.hello_world, {})
--- end
 
 M.events = {}
 M.ns_id = vim.api.nvim_create_namespace("Multiplayer")
@@ -15,6 +9,29 @@ M.curpos = { 1, 1 }
 M.cursor_ns_id = vim.api.nvim_create_namespace("MultiplayerCursor")
 
 M.setup = function(opts)
+	local websocket = job:new({
+		command = "websocat",
+		args = {
+			"ws://",
+		},
+		cwd = vim.fn.getcwd(),
+		on_stdout = function(error, data)
+			if error then
+				vim.api.nvim_err_writeln(error)
+			else
+				print("STDOUT: ", data) -- Handle standard output
+			end
+		end,
+		on_stderr = function(error, data)
+			if error then
+				vim.api.nvim_err_writeln(error)
+				print(error)
+			else
+				print("Error", data) -- Handle standard error
+			end
+		end,
+	})
+
 	-- highlight groups | see :h guifg
 	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor1", { fg = "NvimLightBlue" })
 	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor2", { fg = "NvimLightCyan" })
@@ -28,6 +45,7 @@ M.setup = function(opts)
 	M.username = vim.trim(M.username)
 
 	vim.api.nvim_create_user_command("Multiplayer", function(args)
+		vim.cmd([[echo "hello world"]])
 		if args.fargs[1] == "connect" then
 			M.channel_id = vim.fn.sockconnect("tcp", "localhost:5112", { rpc = true })
 			local conn = require("connection")
@@ -81,6 +99,8 @@ M.setup = function(opts)
 			vim.print(M.events)
 		end
 		if args.fargs[1] == "test" then
+			-- M.channel_id = vim.fn.sockconnect("pipe", "localhost:5112", { rpc = true })
+			-- can we use just a plenary job as a channel?
 			-- require("connection")
 
 			-- M.channel_id = vim.fn.sockconnect("tcp", "localhost:5111", {
@@ -97,28 +117,31 @@ M.setup = function(opts)
 			-- vim.rpcnotify(M.channel_id, "HandleRequest", M.username, vim.api.nvim_win_get_cursor(0))
 			vim.api.nvim_buf_attach(0, false, {
 
-				on_lines = function(lines, buf, ct, fl, ll, ld, m)
-					-- table.insert(M.events, { ... })
-					-- vim.print(args)
-
-					-- vim.rpcnotify(M.channel_id, "something", vim.api.nvim_buf_get_lines(buf, fl, ld, true))
-					-- vim.fn.chansend(M.channel_id, vim.api.nvim_buf_get_lines(buf, fl, ld, true))
-
-					-- for i, s in vim.api.nvim_buf_get_lines(buf, fl, ld, true) do
-					-- vim.api.nvim_chan_send(channel_id, s)
-					-- vim.api.nvim_chan_send(M.channel_id, s)
-					-- end
-
-					-- vim.api.nvim_chan_send(M.channel_id, vim.api.nvim_buf_get_lines(buf, fl, ld, true))
-					-- vim.print(vim.api.nvim_buf_get_lines(buf, fl, ld, true))
-					-- vim.print(vim.api.nvim_win_get_cursor(0))
-					-- vim.api.nvim_chan_send()
-					-- vim.validate
+				-- on_lines = function(lines, buf, ct, fl, ll, ld, m)
+				on_lines = function(...)
+					table.insert(M.events, { ... })
 				end,
-				on_bytes = function(by, buf, ct, srt, sct, boc, oer, oec, oeb, ner, nec, neb)
-					vim.print(by, buf, ct, srt, sct, boc, oer, oec, oeb, ner, nec, neb)
-					vim.print(vim.api.nvim_buf_get_text(0, oer, oec, ner, nec, {}))
-				end,
+				-- vim.print(args)
+
+				-- vim.rpcnotify(M.channel_id, "something", vim.api.nvim_buf_get_lines(buf, fl, ld, true))
+				-- vim.fn.chansend(M.channel_id, vim.api.nvim_buf_get_lines(buf, fl, ld, true))
+
+				-- for i, s in vim.api.nvim_buf_get_lines(buf, fl, ld, true) do
+				-- vim.api.nvim_chan_send(channel_id, s)
+				-- vim.api.nvim_chan_send(M.channel_id, s)
+				-- end
+
+				-- vim.api.nvim_chan_send(M.channel_id, vim.api.nvim_buf_get_lines(buf, fl, ld, true))
+				-- vim.print(vim.api.nvim_buf_get_lines(buf, fl, ld, true))
+				-- vim.print(vim.api.nvim_win_get_cursor(0))
+				-- vim.api.nvim_chan_send()
+				-- vim.validate
+				-- on_bytes = function(by, buf, ct, srt, sct, boc, oer, oec, oeb, ner, nec, neb)
+				-- 	vim.print(by, buf, ct, srt, sct, boc, oer, oec, oeb, ner, nec, neb)
+				-- 	vim.print(vim.api.nvim_buf_get_text(0, oer, oec, ner, nec, {}))
+				-- on_bytes = function(...)
+				-- 	table.insert(M.events, { ... })
+				-- end,
 			})
 		end
 		-- if opts.fargs[1] == "disconnect" then
