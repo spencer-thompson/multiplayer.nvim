@@ -1,0 +1,18 @@
+services:
+  # redis:
+  #   image: redis:latest
+  #   ports:
+  #     - "6379:6379"
+
+  # reflector:
+  #   build:
+  #     dockerfile: Dockerfile
+  #   command: websocketd --port=8080 lua server.lua
+  #   command: nvim
+  #   ports:
+  #     - "8080:8080"
+
+  nvim:
+    build:
+      dockerfile: Dockerfile
+    command: nvim
