@@ -5,11 +5,27 @@ M.curpos = { 1, 1 }
 
 M.cursor_ns_id = vim.api.nvim_create_namespace("MultiplayerCursor")
 
+M.mark_options = { "a", "s", "d", "f" }
+M.used_marks = {}
+M.clients = {}
+
+M.channel = nil
+
+M.next_unused_mark = function()
+	for _, m in ipairs(M.mark_options) do
+		if not M.used_marks[m] then
+			M.used_marks[m] = true
+			return m
+		end
+	end
+	return nil
+end
+
 M.setup = function(opts)
-	M.socket_address = vim.fn.serverstart("websocket")
+	-- M.socket_address = vim.fn.serverstart("websocket")
 
 	-- highlight groups | see :h guifg
-	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor1", { fg = "NvimLightBlue" })
+	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor1", { fg = "white", bg = "white" })
 	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor2", { fg = "NvimLightCyan" })
 	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor3", { fg = "NvimLightGreen" })
 	vim.api.nvim_set_hl(M.cursor_ns_id, "MultiplayerCursor4", { fg = "NvimLightMagenta" })
@@ -20,56 +36,49 @@ M.setup = function(opts)
 	M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
 	M.username = vim.trim(M.username)
 
-	vim.api.nvim_create_user_command("Multi", function(args)
-		if args.fargs[1] == "connect" then
-		end
+	vim.api.nvim_create_user_command("Multiplayer", function(args)
 		-- if args.fargs[1] == "show" then
 		-- 	vim.print(M.events)
 		-- end
 		if args.fargs[1] == "stop" then
 			vim.api.nvim_clear_autocmds({ group = "Multiplayer" })
 		end
-		if args.fargs[1] == "test" then
-			local websocket_send = vim.system(
-				{ "websocat", "ws://localhost:1234" },
-				{ text = false, stdin = true },
-				function(obj)
-					vim.cmd([[echo "closed"]])
-				end
+
+		if args.fargs[1] == "host" then
+			local channel = vim.fn.sockconnect("tcp", "127.0.0.1:6666", { rpc = true })
+			vim.print(channel)
+			M.channel = channel
+
+			local all_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+			vim.rpcrequest(channel, "nvim_buf_set_lines", 0, 0, -1, false, all_lines)
+
+			-- local filename = vim.api.nvim_buf_get_name(0)
+			-- vim.rpcrequest(channel, "nvim_buf_set_name", 0, filename)
+
+			-- M.clients = vim.rpcrequest(channel, "nvim_list_chans")
+
+			-- for _, c in ipairs(M.clients) do
+			-- 	if c.client and c.client.name then
+			-- 		if c.client.name == "Multiplayer" then
+			-- 			M.used_marks[c.client.attributes.mark] = true
+			-- 		end
+			-- 	end
+			-- end
+			--
+			-- local next_mark = M.next_unused_mark()
+
+			vim.rpcrequest(
+				channel,
+				"nvim_set_client_info",
+				"Multiplayer",
+				{},
+				"host",
+				{},
+				{ git_username = M.username, buf = vim.api.nvim_get_current_buf() }
 			)
 
-			vim.system({ "websocat", "ws://localhost:1235" }, {
-				text = false,
-				stdin = true,
-				stdout = function(err, data)
-					vim.print(err)
-					vim.print(data)
-					-- vim.print({ data })
-				end,
-			}, function()
-				vim.cmd([[echo "recieve closed"]])
-				-- TODO: the thing
-			end)
-			-- M.websocket:start()
-
-			M.autocmd_group = vim.api.nvim_create_augroup("Multiplayer", { clear = true })
-			vim.api.nvim_create_autocmd("BufEnter", {
-				desc = "Track Buffer Change",
-				pattern = "*", -- for now
-				group = M.autocmd_group,
-				callback = function()
-					-- TODO: ask user if they want to add new buffer
-					local buf = vim.api.nvim_get_current_buf()
-					local fname = vim.api.nvim_buf_get_name(0)
-
-					local encoded_data = vim.json.encode({
-						usr = M.username,
-						buf = buf,
-						fname = fname,
-					})
-					websocket_send:write({ encoded_data })
-				end,
-			})
+			local filetype = vim.api.nvim_get_option_value("filetype", { buf = 0 })
+			vim.rpcrequest(channel, "nvim_set_option_value", "filetype", filetype, { buf = 0 })
 
 			vim.api.nvim_create_autocmd("CursorMoved", {
 				desc = "Track Cursor Movement",
@@ -79,38 +88,57 @@ M.setup = function(opts)
 					local curpos = vim.api.nvim_win_get_cursor(0)
 					local buf = vim.api.nvim_get_current_buf()
 
-					local encoded_pos = vim.json.encode({
-						usr = M.username,
-						buf = buf,
-						cur = { row = curpos[1], col = curpos[2] },
-					})
-					-- vim.print(encoded_pos)
-					websocket_send:write({ encoded_pos })
+					vim.rpcnotify(
+						channel,
+						"nvim_buf_set_mark",
+						0,
+						string.sub(M.username, 1, 1):lower(),
+						curpos[1],
+						curpos[2],
+						{}
+					)
+					vim.rpcnotify(
+						channel,
+						"nvim_exec_lua",
+						[[return require("multiplayer").send_marks(...)]],
+						{ M.username, M.cursor_ns_id }
+					)
+					-- vim.api.nvim_buf_set_extmark(0, )
 				end,
 			})
 
-			vim.api.nvim_buf_attach(0, false, {
+			vim.api.nvim_buf_attach(0, true, {
+				-- on_lines = function(lines, buf, cgt, flc, llc, llu, bcp)
+				-- 	local content = vim.api.nvim_buf_get_lines(buf, flc, llc, false)
+				-- 	vim.rpcnotify(channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
+				-- end,
+				on_changedtick = function(changed_tick, buf, cgt)
+					local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+					vim.rpcnotify(channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
+				end,
+				on_bytes = function(bytes, buf, cgt, srow, scol, bofc, oerow, oecol, oeblc, nerow, necol, neblc)
+					local content = vim.api.nvim_buf_get_text(buf, srow, scol, srow + nerow, scol + necol, {})
+					vim.rpcnotify(channel, "nvim_buf_set_text", 0, srow, scol, srow + oerow, scol + oecol, content)
+				end,
+				on_reload = function(reload, buf)
+					local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+					vim.rpcnotify(channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
+				end,
+			})
 
-				on_bytes = function(byt, buf, ct, sr, sc, bo, oR, oc, ob, nr, nc, nb)
-					websocket_send:write({ vim.json.encode({ sr, sc, oR, oc, nr, nc }) })
-					if nr < oR or nc < oc then
-						local encoded_data = vim.json.encode({
-							usr = M.username,
-							buf = buf,
-							del = { row = { sr, sr - oR }, col = { sc, sc - oc } },
-						})
-						websocket_send:write({ encoded_data })
-					else
-						local new_text = vim.api.nvim_buf_get_text(buf, sr, sc, sr + nr, sc + nc, {})
-						local encoded_data = vim.json.encode({
-							usr = M.username,
-							buf = buf,
-							text = new_text,
-							row = { sr, sr + nr },
-							col = { sc, sc + nc },
-						})
-						websocket_send:write({ encoded_data })
-					end
+			-- vim.api.nvim_set_client_info("test1", {}, "remote", {}, {})
+			-- nvim list chans gets curent channels
+			--
+		end
+		if args.fargs[1] == "server" then
+			print("hello world")
+
+			vim.api.nvim_create_autocmd("ChanInfo", {
+				desc = "Detect New Client",
+				pattern = "*", -- for now
+				group = M.autocmd_group,
+				callback = function(ev)
+					print(string.format("event fired: %s", vim.inspect(ev)))
 				end,
 			})
 		end
@@ -122,6 +150,108 @@ M.setup = function(opts)
 		complete = function(ArgLead, CmdLine, CursorPos)
 			-- return completion candidates as a list-like table
 			return { "connect", "show", "test" }
+		end,
+	})
+	vim.api.nvim_create_user_command("MultiplayerServer", function(args)
+		if args.fargs[1] == "start" then
+			print("hello")
+		end
+	end, {
+		nargs = 1,
+		complete = function(ArgLead, CmdLine, CursorPos)
+			return { "start" }
+		end,
+	})
+end
+
+M.host = function()
+	print("hello")
+end
+
+M.join = function(opts)
+	print("hello")
+end
+
+M.test = function()
+	-- vim.notify(M.clients)
+	vim.notify(string.format("clients: %s", vim.inspect(M.clients)))
+end
+
+M.send_marks = function(username, ns_id)
+	for _, c in ipairs(M.clients) do
+		-- if not c.client.attributes.git_username == username then
+		local markpos = vim.api.nvim_buf_get_mark(0, c.mark)
+		vim.rpcnotify(c.id, "nvim_buf_set_mark", c.client.attributes.buf, c.mark, markpos[1] + 2, markpos[2], {})
+		vim.rpcrequest(
+			c.id,
+			"nvim_but_set_extmark",
+			c.client.attributes.buf,
+			ns_id,
+			markpos[1] + 2,
+			markpos[2],
+			{ hl_group = "MultiplayerCursor1", end_row = markpos[1] + 2, end_col = markpos[2] + 1 }
+		)
+		-- end
+	end
+end
+
+M.send_data = function(username)
+	-- for _, c in ipairs(M.clients) do
+	-- 	if not c.client.attributes.git_username == username then
+	-- 	end
+	-- end
+	vim.api.nvim_buf_attach(0, false, {
+		-- on_lines = function(lines, buf, cgt, flc, llc, llu, bcp)
+		-- 	local content = vim.api.nvim_buf_get_lines(buf, flc, llc, false)
+		-- 	vim.rpcnotify(channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
+		-- end,
+		on_changedtick = function(changed_tick, buf, cgt)
+			for _, c in ipairs(M.clients) do
+				if not c.client.attributes.git_username == username then
+					local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+					vim.rpcnotify(c.id, "nvim_buf_set_lines", 0, 0, -1, false, content)
+				end
+			end
+		end,
+		on_bytes = function(bytes, buf, cgt, srow, scol, bofc, oerow, oecol, oeblc, nerow, necol, neblc)
+			for _, c in ipairs(M.clients) do
+				if not c.client.attributes.git_username == username then
+					local content = vim.api.nvim_buf_get_text(buf, srow, scol, srow + nerow, scol + necol, {})
+					vim.rpcnotify(c.id, "nvim_buf_set_text", 0, srow, scol, srow + oerow, scol + oecol, content)
+				end
+			end
+		end,
+		on_reload = function(reload, buf)
+			for _, c in ipairs(M.clients) do
+				if not c.client.attributes.git_username == username then
+					local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+					vim.rpcnotify(c.id, "nvim_buf_set_lines", c.client.attributes.buf, 0, -1, false, content)
+				end
+			end
+		end,
+	})
+	-- for _, c in ipairs()
+end
+
+M.server = function()
+	vim.api.nvim_create_autocmd("ChanInfo", {
+		desc = "Detect New Client",
+		pattern = "*", -- for now
+		group = M.autocmd_group,
+		callback = function(ev)
+			print("start")
+			-- local all_clients = vim.rpcrequest(channel, "nvim_list_chans")
+			local all_clients = vim.api.nvim_list_chans()
+			for _, client in ipairs(all_clients) do
+				if client.client and client.client.name then
+					if client.client.name == "Multiplayer" then
+						client.mark = string.sub(client.client.attributes.git_username, 1, 1):lower()
+						table.insert(M.clients, client)
+					end
+				end
+			end
+			-- M.clients = vim.rpcrequest(channel, "nvim_list_chans")
+			-- vim.notify(string.format("event fired: %s", vim.inspect(ev)))
 		end,
 	})
 end

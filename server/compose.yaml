@@ -14,5 +14,8 @@ services:
 
   nvim:
     build:
-      dockerfile: Dockerfile
-    command: nvim
+      context: ../
+      dockerfile: ./server/Dockerfile
+    command: nvim -u ./init.lua --headless --listen 0.0.0.0:6666
+    ports:
+      - "6666:6666"
