@@ -28,4 +28,6 @@ vim.opt.runtimepath:append(".")
 
 local mp = require("multiplayer")
 
+mp.setup()
+
 mp.server()
