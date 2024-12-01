@@ -247,8 +247,23 @@ Multiplayer.host = function()
 end
 
 Multiplayer.join = function(opts)
-	print("hello")
+	local buf = vim.api.nvim_create_buf(true, false)
+	vim.api.nvim_win_set_buf(0, buf)
+	vim.api.nvim_set_option_value("buftype", "acwrite", { buf = buf })
+
+	local lines = vim.rpcrequest(Multiplayer.channel, "nvim_buf_get_lines", 0, 0, -1, false)
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 end
+
+-- Multiplayer.text_updates = function(username, buf, start_row, start_col, end_row, end_col, content)
+-- 	vim.api.nvim_buf_set_text(buf, start_row, start_col, end_row, end_col, content)
+
+-- for name, player in pairs(Multiplayer.players) do
+-- 	if not name == username then
+-- 		vim.rpcrequest(player.id, "nvim_buf_set_text", buf, start_)
+-- 	end
+-- end
+-- end
 
 Multiplayer.updates_to_server = function() end
 
@@ -258,7 +273,7 @@ Multiplayer.test = function()
 	Multiplayer.username = "Test"
 
 	-- vim.notify(Multiplayer.players)
-	vim.notify(string.format("clients: %s", vim.inspect(Multiplayer.players)))
+	-- vim.notify(string.format("clients: %s", vim.inspect(Multiplayer.players)))
 end
 
 Multiplayer.send_marks = function(username, ns_id, hl)
