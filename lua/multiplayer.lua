@@ -213,24 +213,26 @@ Multiplayer.connect = function(address) --address is a string
 		end,
 	})
 
-	vim.api.nvim_buf_attach(0, false, {
-		-- on_lines = function(lines, buf, cgt, flc, llc, llu, bcp)
-		-- 	local content = vim.api.nvim_buf_get_lines(buf, flc, llc, false)
-		-- 	vim.rpcnotify(channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
-		-- end,
-		on_changedtick = function(changed_tick, buf, cgt)
-			local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-			vim.rpcnotify(Multiplayer.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
-		end,
-		on_bytes = function(bytes, buf, cgt, srow, scol, bofc, oerow, oecol, oeblc, nerow, necol, neblc)
-			local content = vim.api.nvim_buf_get_text(buf, srow, scol, srow + nerow, scol + necol, {})
-			vim.rpcnotify(Multiplayer.channel, "nvim_buf_set_text", 0, srow, scol, srow + oerow, scol + oecol, content)
-		end,
-		on_reload = function(reload, buf)
-			local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-			vim.rpcnotify(Multiplayer.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
-		end,
-	})
+	vim.rpcrequest(Multiplayer.channel, "nvim_exec_lua", [[return Multiplayer.updates(...)]], { Multiplayer.username })
+
+	-- vim.api.nvim_buf_attach(0, false, {
+	-- 	-- on_lines = function(lines, buf, cgt, flc, llc, llu, bcp)
+	-- 	-- 	local content = vim.api.nvim_buf_get_lines(buf, flc, llc, false)
+	-- 	-- 	vim.rpcnotify(channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
+	-- 	-- end,
+	-- 	on_changedtick = function(changed_tick, buf, cgt)
+	-- 		local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+	-- 		vim.rpcnotify(Multiplayer.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
+	-- 	end,
+	-- 	on_bytes = function(bytes, buf, cgt, srow, scol, bofc, oerow, oecol, oeblc, nerow, necol, neblc)
+	-- 		local content = vim.api.nvim_buf_get_text(buf, srow, scol, srow + nerow, scol + necol, {})
+	-- 		vim.rpcnotify(Multiplayer.channel, "nvim_buf_set_text", 0, srow, scol, srow + oerow, scol + oecol, content)
+	-- 	end,
+	-- 	on_reload = function(reload, buf)
+	-- 		local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+	-- 		vim.rpcnotify(Multiplayer.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
+	-- 	end,
+	-- })
 end
 
 -- need to call connect() first
@@ -268,6 +270,14 @@ end
 Multiplayer.updates_to_server = function() end
 
 Multiplayer.updates_to_client = function() end
+
+Multiplayer.updates = function(username)
+	vim.rpcrequest(Multiplayer[username].id, "nvim_buf_attach", Multiplayer[username].buf, false, {
+		on_lines = function(...)
+			vim.notify("on_lines")
+		end,
+	})
+end
 
 Multiplayer.test = function()
 	Multiplayer.username = "Test"
@@ -340,8 +350,8 @@ Multiplayer.send_data = function(username)
 end
 
 Multiplayer.sync = function(players)
-	for name, info in pairs(players) do
-		Multiplayer.players[name] = info
+	for name, player in pairs(players) do
+		Multiplayer.players[name] = player
 	end
 end
 
@@ -351,7 +361,8 @@ Multiplayer.server = function()
 		pattern = "*", -- for now
 		group = Multiplayer.autocmd_group,
 		callback = function(ev)
-			print("start")
+			-- vim.notify(string.format("clients: %s", vim.inspect(ev)))
+
 			-- local all_clients = vim.rpcrequest(channel, "nvim_list_chans")
 			local all_clients = vim.api.nvim_list_chans()
 			for _, client in ipairs(all_clients) do
@@ -384,10 +395,44 @@ Multiplayer.server = function()
 				end
 			end
 
-			for _, player in pairs(Multiplayer.players) do
-				vim.rpcrequest(player.id, "nvim_exec_lua", [[return Multiplayer.sync(...)]], { Multiplayer.players })
+			for name, player in pairs(Multiplayer.players) do
+				local res = vim.rpcrequest(player.id, "nvim_buf_attach", player.buf, false, {
+					-- on_lines = function(lines, buf, cgt, flc, llc, llu, bcp)
+					-- 	local content = vim.api.nvim_buf_get_lines(buf, flc, llc, false)
+					-- 	vim.rpcnotify(channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
+					-- end,
+					on_changedtick = function(changed_tick, buf, cgt)
+						-- local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+						-- vim.rpcnotify(Multiplayer.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
+					end,
+					on_bytes = function(bytes, buf, cgt, srow, scol, bofc, oerow, oecol, oeblc, nerow, necol, neblc)
+						vim.notify("on bytes")
+						-- local content = vim.api.nvim_buf_get_text(buf, srow, scol, srow + nerow, scol + necol, {})
+						-- vim.rpcnotify(
+						-- 	Multiplayer.channel,
+						-- 	"nvim_buf_set_text",
+						-- 	0,
+						-- 	srow,
+						-- 	scol,
+						-- 	srow + oerow,
+						-- 	scol + oecol,
+						-- 	content
+						-- )
+					end,
+					on_reload = function(reload, buf)
+						-- local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+						-- vim.rpcnotify(Multiplayer.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
+					end,
+				})
 			end
+			-- for _, player in pairs(Multiplayer.players) do
+			-- 	vim.rpcrequest(player.id, "nvim_exec_lua", [[return Multiplayer.sync(...)]], { Multiplayer.players })
+			-- end
 
+			-- vim.print(ev)
+			-- vim.print(Multiplayer.players)
+			vim.notify(string.format("event: %s\n\nclients: %s", vim.inspect(ev), vim.inspect(Multiplayer.players)))
+			-- vim.print(vim.inspect(Multiplayer.players))
 			-- Multiplayer.players = vim.rpcrequest(channel, "nvim_list_chans")
 			-- vim.notify(string.format("event fired: %s", vim.inspect(ev)))
 		end,
