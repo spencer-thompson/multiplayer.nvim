@@ -10,6 +10,8 @@ Multiplayer.mark_options = { "a", "s", "d", "f" }
 Multiplayer.used_marks = {}
 Multiplayer.players = {}
 
+Multiplayer.coop = require("coop")
+
 -- Multiplayer.channel = nil
 
 Multiplayer.next_unused_mark = function()
