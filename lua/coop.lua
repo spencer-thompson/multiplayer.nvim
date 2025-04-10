@@ -102,7 +102,7 @@ function M.join(ticket, port)
 	M.username = vim.trim(M.username)
 
 	vim.rpcrequest(
-		Multiplayer.channel,
+		M.channel,
 		"nvim_set_client_info",
 		"Multiplayer",
 		{},
@@ -118,8 +118,9 @@ function M.join(ticket, port)
 	return channel
 end
 
-function M.send(msg)
-	vim.rpcnotify(M.channel, "nvim_echo", { { msg } }, true, {})
+function M.send()
+	local message = vim.fn.input("Send a message...")
+	vim.rpcnotify(M.channel, "nvim_echo", { { message } }, true, {})
 end
 
 function M.notify_send(channel, msg)
