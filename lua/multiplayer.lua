@@ -42,19 +42,24 @@ Multiplayer.setup = function(opts)
 	--
 
 	-- DUMBPIPE
-	-- vim.api.nvim_create_user_command("COOP", function(args)
-	-- 	if args.fargs[1] == "host" then
-	-- 		Multiplayer.coop.host()
-	-- 	end
-	--        if args.fargs[1] == "join" then
-	-- end, {
-	-- 	nargs = 1,
-	--
-	-- 	complete = function(ArgLead, CmdLine, CursorPos)
-	-- 		-- return completion candidates as a list-like table
-	-- 		return { "host", "join", "send" }
-	-- 	end,
-	-- })
+	vim.api.nvim_create_user_command("COOP", function(args)
+		if args.fargs[1] == "host" then
+			Multiplayer.coop.host()
+		end
+		if args.fargs[1] == "join" then
+			Multiplayer.coop.join(vim.fn.input("Paste Ticket"))
+		end
+		if args.fargs[1] == "send" then
+			Multiplayer.coop.send()
+		end
+	end, {
+		nargs = 1,
+
+		complete = function(ArgLead, CmdLine, CursorPos)
+			-- return completion candidates as a list-like table
+			return { "host", "join", "send" }
+		end,
+	})
 	-- DUMBPIPE
 
 	vim.api.nvim_create_user_command("Multiplayer", function(args)
