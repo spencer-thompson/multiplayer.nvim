@@ -2,14 +2,29 @@ local Job = require("plenary.job")
 
 local M = {}
 
-function M.host()
+M.group = vim.api.nvim_create_augroup("CO-OP", { clear = true })
+
+function M.cleanup()
+	-- M.dumbpipe
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		desc = "Cleanup",
+		pattern = "*",
+		group = M.group,
+		callback = function()
+			M.dumbpipe:shutdown()
+		end,
+	})
+end
+
+function M.host(port)
+	port = port or 6666
 	-- test
 	local dumbpipe = Job:new({
 		command = "dumbpipe",
 		args = {
 			"listen-tcp",
 			"--host",
-			"0.0.0.0:6666",
+			"0.0.0.0:" .. port,
 		},
 		interactive = false,
 		on_start = function()
@@ -25,16 +40,14 @@ function M.host()
 		end,
 	})
 
-	local address = vim.fn.serverstart("0.0.0.0:6666")
+	local address = vim.fn.serverstart("0.0.0.0:" .. port)
 
 	dumbpipe:start()
-
-	local channel = vim.fn.sockconnect("tcp", "0.0.0.0:6666", { rpc = true })
 
 	vim.api.nvim_create_autocmd("ChanInfo", {
 		desc = "Detect New Client",
 		pattern = "*", -- for now
-		group = vim.api.nvim_create_augroup("coop", { clear = true }),
+		group = M.group,
 		callback = function(ev)
 			-- vim.notify(string.format("clients: %s", vim.inspect(ev)))
 
@@ -53,17 +66,21 @@ function M.host()
 	})
 
 	-- M.channel = channel
+	M.dumbpipe = dumbpipe
 
-	return channel
+	M.cleanup()
+
+	return address
 end
 
-function M.join(ticket)
+function M.join(ticket, port)
+	port = port or 6667
 	local dumbpipe = Job:new({
 		command = "dumbpipe",
 		args = {
 			"connect-tcp",
 			"--addr",
-			"0.0.0.0:6668",
+			"0.0.0.0:" .. port,
 			ticket,
 		},
 		on_stdout = function(error, data)
@@ -77,7 +94,7 @@ function M.join(ticket)
 
 	dumbpipe:start()
 
-	local channel = vim.fn.sockconnect("tcp", "0.0.0.0:6668", { rpc = true })
+	local channel = vim.fn.sockconnect("tcp", "0.0.0.0:" .. port, { rpc = true })
 
 	M.channel = channel
 
@@ -94,11 +111,19 @@ function M.join(ticket)
 		{ git_username = M.username, buf = vim.api.nvim_get_current_buf() }
 	)
 
+	M.dumbpipe = dumbpipe
+
+	M.cleanup()
+
 	return channel
 end
 
+function M.send(msg)
+	vim.rpcnotify(M.channel, "nvim_echo", { { msg } }, true, {})
+end
+
 function M.notify_send(channel, msg)
-	vim.rpcnotify(channel, "nvim_echo", { { "test\n" }, { "chunk2-line1" } }, true, {})
+	vim.rpcnotify(channel, "nvim_echo", { { msg } }, true, {})
 	-- vim.api.nvim_echo({ { "chunk1-line1\nchunk1-line2\n" }, { "chunk2-line1" } }, true, {})
 	-- vim.rpcnotify(
 	-- 	channel,

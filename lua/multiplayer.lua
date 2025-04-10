@@ -39,11 +39,30 @@ Multiplayer.setup = function(opts)
 	vim.api.nvim_set_hl(Multiplayer.cursor_ns_id, "MultiplayerCursor6", { fg = "NvimLightYellow" })
 
 	-- Multiplayer.username = vim.api.nvim_cmd({ "git", "config", "user.name" }, { output = true })
+	--
+
+	-- DUMBPIPE
+	-- vim.api.nvim_create_user_command("COOP", function(args)
+	-- 	if args.fargs[1] == "host" then
+	-- 		Multiplayer.coop.host()
+	-- 	end
+	--        if args.fargs[1] == "join" then
+	-- end, {
+	-- 	nargs = 1,
+	--
+	-- 	complete = function(ArgLead, CmdLine, CursorPos)
+	-- 		-- return completion candidates as a list-like table
+	-- 		return { "host", "join", "send" }
+	-- 	end,
+	-- })
+	-- DUMBPIPE
 
 	vim.api.nvim_create_user_command("Multiplayer", function(args)
 		-- if args.fargs[1] == "show" then
 		-- 	vim.print(Multiplayer.events)
 		-- end
+		-- if args.fargs[1]
+
 		if args.fargs[1] == "stop" then
 			vim.api.nvim_clear_autocmds({ group = "Multiplayer" })
 		end
