@@ -5,6 +5,17 @@
 
 ... video game like cooperative editing inside Neovim.
 
+## Install
+
+- Lazy:
+
+```lua
+{
+  "spencer-thompson/multiplayer.nvim",
+  opts = {}
+},
+```
+
 ## Overview
 
 As an overall glance of how I want this project to go, essentially, I want to use Neovim buffers (which is just text held in memory) and use the Neovim API to track buffer updates. I have already implemented this successfully (twice) using the `nvim_buf_attach()` api function inside of Neovim. I want to track cursor positions and use something like marks to be able to jump to another collaborators position within the file or project. As a side note this `nvim_buf_attach()` function is how Neovim is able to provide lsp support and effectively track every single change in a buffer.
