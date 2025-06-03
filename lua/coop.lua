@@ -1,11 +1,111 @@
+-- Essentially there need to be two autocmds:
+-- + one for cursors (location)
+-- + one for buffer updates
+
 local Job = require("plenary.job")
+local uv = vim.uv
 
 local M = {}
 
 M.group = vim.api.nvim_create_augroup("CO-OP", { clear = true })
+M.ns_id = vim.api.nvim_create_namespace("MultiplayerCursor")
+
+M.players = {}
+
+M.active = false
+
+function M.init()
+	-- setup the plugin
+
+	-- vim.api.nvim_create_autocmd("CursorMoved", {
+	-- 	desc = "Track Cursor Movement",
+	-- 	pattern = "*", -- for now
+	-- 	group = M.group,
+	-- 	callback = function()
+	-- 		local curpos = vim.api.nvim_win_get_cursor(0)
+	--
+	-- 		vim.rpcnotify(
+	-- 			Multiplayer.channel,
+	-- 			"nvim_buf_set_mark",
+	-- 			0,
+	-- 			string.sub(Multiplayer.username, 1, 1):lower(),
+	-- 			curpos[1],
+	-- 			curpos[2],
+	-- 			{}
+	-- 		)
+	-- 		vim.rpcnotify(
+	-- 			Multiplayer.channel,
+	-- 			"nvim_exec_lua",
+	-- 			[[return Multiplayer.send_marks(...)]],
+	-- 			{ Multiplayer.username, Multiplayer.cursor_ns_id, "MultiplayerCursor" }
+	-- 		)
+	--
+	-- 		vim.rpcrequest(
+	-- 			player.id,
+	-- 			"nvim_buf_set_extmark",
+	-- 			player.buf,
+	-- 			ns_id,
+	-- 			markpos[1] - 1,
+	-- 			markpos[2] - 1, -- remove minus one for testing
+	-- 			{ hl_group = hl, end_col = markpos[2] + 1, id = player.id }
+	-- 		)
+	-- 	end,
+	-- })
+end
+
+-- This will eventually replace plenary
+function M.start_connection_process(port)
+	local handle, pid = uv.spawn("dumbpipe", {
+		args = { "listen-tcp", "--host", "0.0.0.0:" .. port },
+	}, function(code, signal) -- on exit
+		print("exit code", code)
+		print("exit signal", signal)
+	end)
+
+	M.process_handle = handle
+end
+
+function M.end_connection_process()
+	local result = uv.process_kill(M.process_handle, "sigterm")
+end
+
+function M.track_cursor()
+	vim.api.nvim_create_autocmd("CursorMoved", {
+		desc = "Track Cursor Movement",
+		pattern = "*", -- for now
+		group = M.group,
+		callback = function(ev)
+			local ok, res = pcall(vim.api.nvim_buf_get_var, ev.buf, "sharing")
+			if ok and res then
+				-- if vim.api.nvim_buf_get_var(ev.buf, "sharing") then
+				local ok, connected_bufnr = pcall(vim.api.nvim_buf_get_var, ev.buf, "multiplayer_bufnr")
+				if ok then
+					local curpos = vim.api.nvim_win_get_cursor(0)
+
+					local mark_letter = string.sub(M.username, 1, 1):lower()
+
+					vim.rpcnotify(
+						M.channel,
+						"nvim_buf_set_mark",
+						connected_bufnr,
+						mark_letter,
+						curpos[1],
+						curpos[2],
+						{}
+					)
+					vim.rpcnotify(
+						M.channel,
+						"nvim_exec_lua",
+						[[return Multiplayer.coop.render_cursor(...)]],
+						{ connected_bufnr, mark_letter }
+					)
+				end
+			end
+		end,
+	})
+end
 
 function M.cleanup()
-	-- M.dumbpipe
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		desc = "Cleanup",
 		pattern = "*",
@@ -18,7 +118,6 @@ end
 
 function M.host(port)
 	port = port or 6666
-	-- test
 	local dumbpipe = Job:new({
 		command = "dumbpipe",
 		args = {
@@ -49,26 +148,24 @@ function M.host(port)
 		pattern = "*", -- for now
 		group = M.group,
 		callback = function(ev)
-			-- vim.notify(string.format("clients: %s", vim.inspect(ev)))
-
-			-- local all_clients = vim.rpcrequest(channel, "nvim_list_chans")
 			local all_clients = vim.api.nvim_list_chans()
 			for _, client in ipairs(all_clients) do
 				if client.client and client.client.name then
 					if client.client.name == "Multiplayer" then
 						vim.print("Connected")
-						vim.print("client.id")
 						M.channel = client.id
+						-- M.active = true
+						M.on_connect("host")
 					end
 				end
 			end
 		end,
 	})
 
-	-- M.channel = channel
 	M.dumbpipe = dumbpipe
 
 	M.cleanup()
+	M.track_cursor()
 
 	return address
 end
@@ -98,6 +195,29 @@ function M.join(ticket, port)
 
 	M.channel = channel
 
+	-- M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
+	-- M.username = vim.trim(M.username)
+	--
+	-- vim.rpcrequest(
+	-- 	M.channel,
+	-- 	"nvim_set_client_info",
+	-- 	"Multiplayer",
+	-- 	{},
+	-- 	"host",
+	-- 	{},
+	-- 	{ git_username = M.username, buf = vim.api.nvim_get_current_buf() }
+	-- )
+	M.on_connect("join")
+
+	M.dumbpipe = dumbpipe
+
+	M.cleanup()
+	M.track_cursor()
+
+	return channel
+end
+
+function M.on_connect(role)
 	M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
 	M.username = vim.trim(M.username)
 
@@ -108,14 +228,61 @@ function M.join(ticket, port)
 		{},
 		"host",
 		{},
-		{ git_username = M.username, buf = vim.api.nvim_get_current_buf() }
+		{ git_username = M.username, role = role }
 	)
 
-	M.dumbpipe = dumbpipe
+	M.active = true
+end
 
-	M.cleanup()
+function M.render_cursor(bufnr, letter)
+	-- this function assumes that the mark is set for other players cursor position
+	bufnr = bufnr or 0
+	if vim.api.nvim_buf_get_var(bufnr, "sharing") then
+		letter = letter or "p"
+		local markpos = vim.api.nvim_buf_get_mark(bufnr, letter)
+		vim.api.nvim_buf_set_extmark(
+			bufnr,
+			M.ns_id,
+			markpos[1],
+			markpos[2],
+			{ hl_group = "Cursor", end_col = markpos[2] + 1, id = M.channel }
+		)
+	end
+end
 
-	return channel
+function M.share_buf(bufnr)
+	bufnr = bufnr or 0
+
+	local filetype = vim.api.nvim_get_option_value("filetype", { buf = bufnr })
+	local full_filename = vim.api.nvim_buf_get_name(bufnr)
+	local base_filename = vim.fs.basename(full_filename)
+
+	-- send buffer
+	local connected_bufnr = vim.rpcrequest(M.channel, "nvim_create_buf", true, false)
+
+	vim.rpcrequest(M.channel, "nvim_set_option_value", "buftype", "acwrite", { buf = connected_bufnr })
+	vim.rpcrequest(M.channel, "nvim_set_option_value", "filetype", filetype, { buf = connected_bufnr })
+	vim.rpcrequest(M.channel, "nvim_buf_set_name", connected_bufnr, base_filename)
+
+	vim.rpcrequest(M.channel, "nvim_create_autocmd", "BufWriteCmd", {
+		desc = "Sharing " .. base_filename,
+		group = M.group,
+		buffer = connected_bufnr,
+		command = "set nomodified",
+	})
+
+	-- set all the lines in the new buffer
+	local all_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+	vim.rpcrequest(M.channel, "nvim_buf_set_lines", connected_bufnr, 0, -1, false, all_lines)
+
+	vim.rpcrequest(M.channel, "nvim_win_set_buf", 0, connected_bufnr)
+
+	-- mark buffer
+	vim.api.nvim_buf_set_var(bufnr, "sharing", true)
+	vim.api.nvim_buf_set_var(bufnr, "multiplayer_bufnr", connected_bufnr)
+
+	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "sharing", true)
+	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "multiplayer_bufnr", bufnr)
 end
 
 function M.send()
@@ -138,5 +305,18 @@ end
 function M.test_connection(channel)
 	M.notify_send(channel, "hello")
 end
+
+function M.bufs()
+	local all_bufs = {}
+	for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+		if vim.api.nvim_buf_is_valid(buf) and vim.api.nvim_buf_is_loaded(buf) then
+			local ft = vim.api.nvim_get_option_value("filetype", { buf = buf })
+			all_bufs[buf] = ft
+		end
+	end
+	vim.print(all_bufs)
+end
+
+-- function M.
 
 return M

@@ -1,4 +1,3 @@
-local M = {}
 local Multiplayer = {}
 
 Multiplayer.ns_id = vim.api.nvim_create_namespace("Multiplayer")
@@ -42,7 +41,7 @@ Multiplayer.setup = function(opts)
 	--
 
 	-- DUMBPIPE
-	vim.api.nvim_create_user_command("COOP", function(args)
+	vim.api.nvim_create_user_command("Coop", function(args)
 		if args.fargs[1] == "host" then
 			Multiplayer.coop.host()
 		end
@@ -50,6 +49,9 @@ Multiplayer.setup = function(opts)
 			Multiplayer.coop.join(vim.fn.input("Paste Ticket"))
 		end
 		if args.fargs[1] == "send" then
+			Multiplayer.coop.send()
+		end
+		if args.fargs[1] == "test" then
 			Multiplayer.coop.send()
 		end
 	end, {
