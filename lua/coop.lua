@@ -171,7 +171,7 @@ function M.host(port)
 end
 
 function M.join(ticket, port)
-	port = port or 6669
+	port = port or 6969
 	local dumbpipe = Job:new({
 		command = "dumbpipe",
 		args = {
