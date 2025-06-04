@@ -1,6 +1,9 @@
 -- Essentially there need to be two autocmds:
 -- + one for cursors (location)
 -- + one for buffer updates
+--
+--
+--
 
 local Job = require("plenary.job")
 local uv = vim.uv
@@ -9,49 +12,11 @@ local M = {}
 
 M.group = vim.api.nvim_create_augroup("CO-OP", { clear = true })
 M.ns_id = vim.api.nvim_create_namespace("MultiplayerCursor")
+M.vns_id = vim.api.nvim_create_namespace("MultiplayerCursorVisual")
 
 M.players = {}
 
 M.active = false
-
-function M.init()
-	-- setup the plugin
-
-	-- vim.api.nvim_create_autocmd("CursorMoved", {
-	-- 	desc = "Track Cursor Movement",
-	-- 	pattern = "*", -- for now
-	-- 	group = M.group,
-	-- 	callback = function()
-	-- 		local curpos = vim.api.nvim_win_get_cursor(0)
-	--
-	-- 		vim.rpcnotify(
-	-- 			Multiplayer.channel,
-	-- 			"nvim_buf_set_mark",
-	-- 			0,
-	-- 			string.sub(Multiplayer.username, 1, 1):lower(),
-	-- 			curpos[1],
-	-- 			curpos[2],
-	-- 			{}
-	-- 		)
-	-- 		vim.rpcnotify(
-	-- 			Multiplayer.channel,
-	-- 			"nvim_exec_lua",
-	-- 			[[return Multiplayer.send_marks(...)]],
-	-- 			{ Multiplayer.username, Multiplayer.cursor_ns_id, "MultiplayerCursor" }
-	-- 		)
-	--
-	-- 		vim.rpcrequest(
-	-- 			player.id,
-	-- 			"nvim_buf_set_extmark",
-	-- 			player.buf,
-	-- 			ns_id,
-	-- 			markpos[1] - 1,
-	-- 			markpos[2] - 1, -- remove minus one for testing
-	-- 			{ hl_group = hl, end_col = markpos[2] + 1, id = player.id }
-	-- 		)
-	-- 	end,
-	-- })
-end
 
 -- This will eventually replace plenary
 function M.start_connection_process(port)
@@ -84,6 +49,10 @@ function M.track_cursor()
 
 					local mark_letter = string.sub(M.username, 1, 1):lower()
 
+					local mode = vim.api.nvim_get_mode()
+
+					local vmarks = vim.fn.getpos("v")
+
 					vim.rpcnotify(
 						M.channel,
 						"nvim_buf_set_mark",
@@ -93,14 +62,36 @@ function M.track_cursor()
 						curpos[2],
 						{}
 					)
+
 					vim.rpcnotify(
 						M.channel,
 						"nvim_exec_lua",
 						[[return Multiplayer.coop.render_cursor(...)]],
-						{ connected_bufnr, mark_letter }
+						{ connected_bufnr, mark_letter, mode.mode, vmarks }
 					)
 				end
 			end
+		end,
+	})
+end
+
+function M.track_edits(bufnr)
+	vim.api.nvim_buf_attach(bufnr, true, {
+
+		on_changedtick = function(changed_tick, buf, cgt)
+			local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+			vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
+		end,
+
+		on_bytes = function(bytes, buf, cgt, srow, scol, bofc, oerow, oecol, oeblc, nerow, necol, neblc)
+			local content = vim.api.nvim_buf_get_text(buf, srow, scol, srow + nerow, scol + necol, {})
+			-- NOTE: This is where changes are sent
+			vim.rpcnotify(M.channel, "nvim_buf_set_text", 0, srow, scol, srow + oerow, scol + oecol, content)
+		end,
+
+		on_reload = function(reload, buf)
+			local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+			vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
 		end,
 	})
 end
@@ -234,19 +225,57 @@ function M.on_connect(role)
 	M.active = true
 end
 
-function M.render_cursor(bufnr, letter)
+function M.render_cursor(bufnr, letter, mode, vmarks)
 	-- this function assumes that the mark is set for other players cursor position
 	bufnr = bufnr or 0
 	if vim.api.nvim_buf_get_var(bufnr, "sharing") then
 		letter = letter or "p"
 		local markpos = vim.api.nvim_buf_get_mark(bufnr, letter)
-		vim.api.nvim_buf_set_extmark(
-			bufnr,
-			M.ns_id,
-			markpos[1],
-			markpos[2],
-			{ hl_group = "Cursor", end_col = markpos[2] + 1, id = M.channel }
-		)
+		-- vim.api.nvim_buf_clear_namespace(bufnr, M.ns_id, 0, -1)
+		vim.api.nvim_buf_clear_namespace(bufnr, M.vns_id, 0, -1)
+		if mode == "n" then
+			vim.api.nvim_buf_del_extmark(bufnr, M.ns_id, M.channel + 1)
+		end
+		vim.api.nvim_buf_set_extmark(bufnr, M.ns_id, markpos[1] - 1, markpos[2], {
+			hl_group = "Cursor",
+			end_col = markpos[2] + 1,
+			id = M.channel,
+			strict = false,
+		})
+
+		if mode == "v" then
+			local vstart = markpos
+			local vend = { vmarks[2], vmarks[3] }
+
+			if markpos[1] > vmarks[2] then
+				vstart = { vmarks[2], vmarks[3] }
+				vend = markpos
+			end
+
+			if markpos[1] == vmarks[2] and markpos[2] > vmarks[3] then
+				vstart = { markpos[1], vmarks[3] }
+				vend = { vmarks[2], markpos[2] }
+			end
+
+			if markpos[1] == vmarks[2] and markpos[2] < vmarks[3] then
+				vstart = { vmarks[2], markpos[2] }
+				vend = { markpos[1], vmarks[3] }
+			end
+
+			vim.api.nvim_buf_set_extmark(bufnr, M.vns_id, vstart[1] - 1, vstart[2], {
+				hl_group = "Visual",
+				-- end_row = vmarks[2][1] - 1,
+				-- end_col = vmarks[2][2],
+				end_row = vend[1] - 1,
+				end_col = vend[2],
+				id = M.channel + 1,
+				strict = false,
+			})
+		end
+
+		-- if mode ~= "v" then
+		-- 	vim.api.nvim_buf_del_extmark(bufnr, M.ns_id, M.channel + 1)
+		-- end
 	end
 end
 
@@ -283,6 +312,11 @@ function M.share_buf(bufnr)
 
 	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "sharing", true)
 	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "multiplayer_bufnr", bufnr)
+
+	-- recursive 🙃
+	-- M.track_edits(bufnr)
+
+	-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
 end
 
 function M.send()
