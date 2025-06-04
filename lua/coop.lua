@@ -221,7 +221,7 @@ function M.on_connect(role)
 	M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
 	M.username = vim.trim(M.username)
 
-	vim.rpcrequest(
+	vim.rpcnotify(
 		M.channel,
 		"nvim_set_client_info",
 		"Multiplayer",
