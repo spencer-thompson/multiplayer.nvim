@@ -266,7 +266,7 @@ function M.share_buf(bufnr)
 
 	vim.rpcrequest(M.channel, "nvim_create_autocmd", "BufWriteCmd", {
 		desc = "Sharing " .. base_filename,
-		group = M.group,
+		-- group = M.group, -- invalid group
 		buffer = connected_bufnr,
 		command = "set nomodified",
 	})
