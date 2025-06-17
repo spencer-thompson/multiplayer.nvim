@@ -78,16 +78,21 @@ end
 function M.track_edits(bufnr)
 	vim.api.nvim_buf_attach(bufnr, true, {
 
+		on_lines = function(lines, buf, cgt, flc, llc, llu, bcp)
+			local content = vim.api.nvim_buf_get_lines(buf, flc, llc, false)
+			vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
+		end,
+
 		on_changedtick = function(changed_tick, buf, cgt)
 			local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 			vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
 		end,
 
-		on_bytes = function(bytes, buf, cgt, srow, scol, bofc, oerow, oecol, oeblc, nerow, necol, neblc)
-			local content = vim.api.nvim_buf_get_text(buf, srow, scol, srow + nerow, scol + necol, {})
-			-- NOTE: This is where changes are sent
-			vim.rpcnotify(M.channel, "nvim_buf_set_text", 0, srow, scol, srow + oerow, scol + oecol, content)
-		end,
+		-- on_bytes = function(bytes, buf, cgt, srow, scol, bofc, oerow, oecol, oeblc, nerow, necol, neblc)
+		-- 	local content = vim.api.nvim_buf_get_text(buf, srow, scol, srow + nerow, scol + necol, {})
+		-- 	-- NOTE: This is where changes are sent
+		-- 	vim.rpcnotify(M.channel, "nvim_buf_set_text", 0, srow, scol, srow + oerow, scol + oecol, content)
+		-- end,
 
 		on_reload = function(reload, buf)
 			local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
@@ -130,6 +135,7 @@ function M.host(port)
 		end,
 	})
 
+	-- NOTE: Need to grab port
 	local address = vim.fn.serverstart("0.0.0.0:" .. port)
 
 	dumbpipe:start()
@@ -158,6 +164,7 @@ function M.host(port)
 	M.cleanup()
 	M.track_cursor()
 
+	-- vim.print(address)
 	return address
 end
 
@@ -243,7 +250,9 @@ function M.render_cursor(bufnr, letter, mode, vmarks)
 			strict = false,
 		})
 
-		if mode == "v" then
+		local visual_modes = string.sub(mode, 1, 1):lower()
+
+		if visual_modes == "v" then
 			local vstart = markpos
 			local vend = { vmarks[2], vmarks[3] }
 
@@ -314,9 +323,8 @@ function M.share_buf(bufnr)
 	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "multiplayer_bufnr", bufnr)
 
 	-- recursive 🙃
-	-- M.track_edits(bufnr)
-
-	-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
+	M.track_edits(bufnr)
+	vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
 end
 
 function M.send()
