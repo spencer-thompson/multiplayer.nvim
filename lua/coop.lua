@@ -164,7 +164,7 @@ function M.host(port)
 	M.cleanup()
 	M.track_cursor()
 
-	-- vim.print(address)
+	vim.print(address)
 	return address
 end
 
@@ -179,6 +179,7 @@ function M.join(ticket, port)
 			ticket,
 		},
 		on_stdout = function(error, data)
+			vim.print(error)
 			vim.print(data)
 		end,
 		on_stderr = function(error, data)
@@ -323,8 +324,8 @@ function M.share_buf(bufnr)
 	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "multiplayer_bufnr", bufnr)
 
 	-- recursive 🙃
-	M.track_edits(bufnr)
-	vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
+	-- M.track_edits(bufnr)
+	-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
 end
 
 function M.send()

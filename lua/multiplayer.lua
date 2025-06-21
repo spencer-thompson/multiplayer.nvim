@@ -54,6 +54,14 @@ Multiplayer.setup = function(opts)
 		if args.fargs[1] == "test" then
 			Multiplayer.coop.send()
 		end
+		if args.fargs[1] == "share" then
+			if args.fargs[2] == nil then
+				Multiplayer.coop.share_buf(0)
+			end
+			if args.fargs[2] == "buf" then
+				Multiplayer.coop.share_buf(0)
+			end
+		end
 	end, {
 		nargs = 1,
 
