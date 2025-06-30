@@ -11,6 +11,8 @@ Multiplayer.players = {}
 
 Multiplayer.coop = require("coop")
 
+local state = require("state")
+
 -- Multiplayer.channel = nil
 
 Multiplayer.next_unused_mark = function()
@@ -24,6 +26,14 @@ Multiplayer.next_unused_mark = function()
 end
 
 Multiplayer.setup = function(opts)
+	state.config = vim.tbl_deep_extend("force", state.config, opts or {})
+
+	-- Setup username from config or get git username
+	state.config.username = state.config.username
+		or vim.trim(vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout)
+
+	-- vim.print(state)
+
 	_G.Multiplayer = Multiplayer
 	-- Multiplayer.socket_address = vim.fn.serverstart("websocket")
 

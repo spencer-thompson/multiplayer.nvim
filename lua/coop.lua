@@ -8,6 +8,8 @@
 local Job = require("plenary.job")
 local uv = vim.uv
 
+local state = require("state")
+
 local M = {}
 
 M.group = vim.api.nvim_create_augroup("CO-OP", { clear = true })
@@ -17,6 +19,8 @@ M.vns_id = vim.api.nvim_create_namespace("MultiplayerCursorVisual")
 M.players = {}
 
 M.active = false
+
+M.username = state.config.username
 
 -- This will eventually replace plenary
 function M.start_connection_process(port)
@@ -79,13 +83,14 @@ function M.track_edits(bufnr)
 	vim.api.nvim_buf_attach(bufnr, true, {
 
 		on_lines = function(lines, buf, cgt, flc, llc, llu, bcp)
+			vim.print({ cgt, flc, llc, llu, bcp })
 			local content = vim.api.nvim_buf_get_lines(buf, flc, llc, false)
-			vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
+			-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
 		end,
 
 		on_changedtick = function(changed_tick, buf, cgt)
 			local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-			vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
+			-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
 		end,
 
 		-- on_bytes = function(bytes, buf, cgt, srow, scol, bofc, oerow, oecol, oeblc, nerow, necol, neblc)
@@ -96,11 +101,28 @@ function M.track_edits(bufnr)
 
 		on_reload = function(reload, buf)
 			local content = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-			vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
+			-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
 		end,
 	})
 end
 
+function M.test_track_edits(bufnr)
+	vim.api.nvim_buf_attach(bufnr, false, {
+		-- I need to track users
+		on_lines = function(lines, buf, changedtick, flc, llc, llu, bcp)
+			vim.print({
+				-- lines,
+				-- buf,
+				-- changedtick,
+				flc,
+				llc,
+				llu,
+				-- bcp
+				vim.api.nvim_buf_get_lines(0, flc, llu, false),
+			})
+		end,
+	})
+end
 function M.cleanup()
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		desc = "Cleanup",
@@ -217,8 +239,8 @@ function M.join(ticket, port)
 end
 
 function M.on_connect(role)
-	M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
-	M.username = vim.trim(M.username)
+	-- M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
+	-- M.username = vim.trim(M.username)
 
 	vim.rpcnotify(
 		M.channel,
@@ -328,6 +350,27 @@ function M.share_buf(bufnr)
 	-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
 end
 
+-- takes a table as an argument with the keys
+-- type = "lines" | "bytes"
+-- start_row
+-- start_col
+-- end_row
+-- end_col
+-- content
+function M.apply_edit(edit)
+	-- this is definitely not done
+	if edit.type == "lines" then
+		local content = vim.api.nvim_buf_get_lines(0, edit.start_row, edit.end_row, false)
+		local line_count = vim.api.nvim_buf_line_count(0)
+		if content == edit.content and line_count == edit.line_count then
+			return
+		end
+		if content ~= edit.content and line_count == edit.line_count then
+			vim.api.nvim_buf_set_lines(0, edit.start_row, edit.end_row, false, edit.content)
+		end
+	end
+end
+
 function M.send()
 	local message = vim.fn.input("Send a message...")
 	vim.rpcnotify(M.channel, "nvim_echo", { { message } }, true, {})
@@ -359,7 +402,5 @@ function M.bufs()
 	end
 	vim.print(all_bufs)
 end
-
--- function M.
 
 return M
