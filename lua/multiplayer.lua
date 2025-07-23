@@ -11,6 +11,8 @@ Multiplayer.players = {}
 
 Multiplayer.coop = require("coop")
 
+-- Multiplayer.rust = require("rust")
+
 local state = require("state")
 
 -- Multiplayer.channel = nil
@@ -62,7 +64,7 @@ Multiplayer.setup = function(opts)
 			Multiplayer.coop.send()
 		end
 		if args.fargs[1] == "test" then
-			Multiplayer.coop.send()
+			require("rust")
 		end
 		if args.fargs[1] == "share" then
 			if args.fargs[2] == nil then

@@ -135,7 +135,7 @@ function M.cleanup()
 end
 
 function M.host(port)
-	port = port or 6666
+	port = port or Multiplayer.rust.port()
 	local dumbpipe = Job:new({
 		command = "dumbpipe",
 		args = {
@@ -157,7 +157,6 @@ function M.host(port)
 		end,
 	})
 
-	-- NOTE: Need to grab port
 	local address = vim.fn.serverstart("0.0.0.0:" .. port)
 
 	dumbpipe:start()
@@ -191,13 +190,17 @@ function M.host(port)
 end
 
 function M.join(ticket, port)
-	port = port or 6969
+	port = port or Multiplayer.rust.port()
+	local address = "0.0.0.0:" .. port
+	-- local address = "0.0.0.0:6666"
+	-- local address = "127.0.0.1:" .. port
+	vim.print(address)
 	local dumbpipe = Job:new({
 		command = "dumbpipe",
 		args = {
 			"connect-tcp",
 			"--addr",
-			"0.0.0.0:" .. port,
+			address,
 			ticket,
 		},
 		on_stdout = function(error, data)
@@ -208,11 +211,36 @@ function M.join(ticket, port)
 			vim.print(error)
 			vim.print(data)
 		end,
-	})
+	}):start()
 
-	dumbpipe:start()
+	-- vim.print("the port should be " .. port)
+	-- local timer = vim.uv.new_timer()
+	-- timer:start(1000, 0, function()
+	-- 	vim.print("waited a sec")
+	-- end)
+	-- timer:close()
+	--
+	--
+	vim.print(address)
+	-- local timer = vim.uv.new_timer()
+	-- local i = 0
+	-- timer:start(1000, 1000, function()
+	-- 	vim.print("attempting to connect")
+	-- 	local ok, channel = pcall(vim.fn.sockconnect, "tcp", address, { rpc = true })
+	-- 	if ok then
+	-- 		vim.print("Successfully connected")
+	-- 		timer:close()
+	-- 	end
+	-- 	if i > 4 then
+	-- 		vim.print("Error after 4 attempts")
+	-- 		timer:close()
+	-- 	end
+	-- 	i = i + 1
+	-- end)
 
-	local channel = vim.fn.sockconnect("tcp", "0.0.0.0:" .. port, { rpc = true })
+	-- dumbpipe:start()
+	local channel = vim.fn.sockconnect("tcp", address, { rpc = true })
+	-- local address = vim.fn.serverstart("0.0.0.0:" .. port)
 
 	M.channel = channel
 
