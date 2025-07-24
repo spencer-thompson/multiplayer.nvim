@@ -11,7 +11,7 @@ Multiplayer.players = {}
 
 Multiplayer.coop = require("coop")
 
--- Multiplayer.rust = require("rust")
+Multiplayer.rust = require("rust")
 
 local state = require("state")
 
