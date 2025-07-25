@@ -189,6 +189,62 @@ function M.host(port)
 	return address
 end
 
+function M.host_job()
+	local channel = vim.fn.jobstart({ "dumbpipe", "listen" }, {
+		rpc = true,
+		detach = true,
+		on_stderr = function(chan, data, name)
+			vim.print(data)
+		end,
+		-- stderr_buffered = false,
+		-- stdout_buffered = false,
+	})
+
+	M.channel = channel
+
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		desc = "Cleanup",
+		pattern = "*",
+		group = M.group,
+		callback = function()
+			-- M.dumbpipe:shutdown()
+			vim.fn.jobstop(M.channel)
+		end,
+	})
+
+	M.cleanup()
+	M.on_connect("host")
+	M.track_cursor()
+end
+
+function M.join_job(ticket)
+	local channel = vim.fn.jobstart({ "dumbpipe", "connect", ticket }, {
+		rpc = true,
+		detach = true,
+		on_stderr = function(chan, data, name)
+			vim.print(data)
+		end,
+		-- stderr_buffered = false,
+		-- stdout_buffered = false,
+	})
+
+	M.channel = channel
+
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		desc = "Cleanup",
+		pattern = "*",
+		group = M.group,
+		callback = function()
+			-- M.dumbpipe:shutdown()
+			vim.fn.jobstop(M.channel)
+		end,
+	})
+
+	M.cleanup()
+	M.on_connect("join")
+	M.track_cursor()
+end
+
 function M.join(ticket, port)
 	port = port or Multiplayer.rust.port()
 	local address = "0.0.0.0:" .. port
@@ -237,12 +293,18 @@ function M.join(ticket, port)
 	-- 	end
 	-- 	i = i + 1
 	-- end)
+	local test_address = "127.0.0.1:" .. port
 
 	-- dumbpipe:start()
-	local channel = vim.fn.sockconnect("tcp", address, { rpc = true })
+	local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. port, { rpc = true })
+	-- local ok, chan = pcall(vim.fn.sockconnect, "tcp", test_address, { rpc = true })
+	-- vim.print(chan)
+	-- if ok and chan then
+	-- 	M.channel = chan
+	-- end
 	-- local address = vim.fn.serverstart("0.0.0.0:" .. port)
 
-	M.channel = channel
+	M.channel = chan
 
 	-- M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
 	-- M.username = vim.trim(M.username)
@@ -263,7 +325,7 @@ function M.join(ticket, port)
 	M.cleanup()
 	M.track_cursor()
 
-	return channel
+	return chan
 end
 
 function M.on_connect(role)
