@@ -48,7 +48,7 @@ function M.end_connection_process()
 end
 
 function M.track_cursor()
-	vim.api.nvim_create_autocmd("CursorMoved", {
+	vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
 		desc = "Track Cursor Movement",
 		pattern = "*", -- for now
 		group = M.group,
@@ -263,70 +263,12 @@ function M.host(port)
 	return address
 end
 
-function M.host_job()
-	local channel = vim.fn.jobstart({ "dumbpipe", "listen" }, {
-		rpc = true,
-		detach = true,
-		on_stderr = function(chan, data, name)
-			vim.print(data)
-		end,
-		-- stderr_buffered = false,
-		-- stdout_buffered = false,
-	})
-
-	M.channel = channel
-
-	vim.api.nvim_create_autocmd("VimLeavePre", {
-		desc = "Cleanup",
-		pattern = "*",
-		group = M.group,
-		callback = function()
-			-- M.dumbpipe:shutdown()
-			vim.fn.jobstop(M.channel)
-		end,
-	})
-
-	M.cleanup()
-	M.on_connect("host")
-	M.track_cursor()
-end
-
-function M.join_job(ticket)
-	local channel = vim.fn.jobstart({ "dumbpipe", "connect", ticket }, {
-		rpc = true,
-		detach = true,
-		on_stderr = function(chan, data, name)
-			vim.print(data)
-		end,
-		-- stderr_buffered = false,
-		-- stdout_buffered = false,
-	})
-
-	M.channel = channel
-
-	vim.api.nvim_create_autocmd("VimLeavePre", {
-		desc = "Cleanup",
-		pattern = "*",
-		group = M.group,
-		callback = function()
-			-- M.dumbpipe:shutdown()
-			vim.fn.jobstop(M.channel)
-		end,
-	})
-
-	M.cleanup()
-	M.on_connect("join")
-	M.track_cursor()
-end
-
 function M.join(ticket, port)
 	M.init()
 	M.client_number = 2 -- HACK:
 	port = port or Multiplayer.rust.port()
 	-- port = port or 6969
 	local address = "0.0.0.0:" .. port
-	-- local address = "0.0.0.0:6666"
-	-- local address = "127.0.0.1:" .. port
 	vim.print(address)
 	local dumbpipe = Job:new({
 		command = "dumbpipe",
@@ -348,32 +290,7 @@ function M.join(ticket, port)
 
 	dumbpipe:start()
 
-	-- vim.print("the port should be " .. port)
-	-- local timer = vim.uv.new_timer()
-	-- timer:start(1000, 0, function()
-	-- 	vim.print("waited a sec")
-	-- end)
-	-- timer:close()
-	--
-	--
-	-- vim.print(address)
-	-- local timer = vim.uv.new_timer()
-	-- local i = 0
-	-- timer:start(1000, 1000, function()
-	-- 	vim.print("attempting to connect")
-	-- 	local ok, channel = pcall(vim.fn.sockconnect, "tcp", address, { rpc = true })
-	-- 	if ok then
-	-- 		vim.print("Successfully connected")
-	-- 		timer:close()
-	-- 	end
-	-- 	if i > 4 then
-	-- 		vim.print("Error after 4 attempts")
-	-- 		timer:close()
-	-- 	end
-	-- 	i = i + 1
-	-- end)
-	-- local test_address = "127.0.0.1:" .. port
-	--
+	-- we have to wait just a bit for the socket to connect
 	vim.defer_fn(function()
 		local chan = vim.fn.sockconnect("tcp", address, { rpc = true })
 		vim.print(chan)
@@ -385,7 +302,7 @@ function M.join(ticket, port)
 
 		M.cleanup()
 		M.track_cursor()
-	end, 2000)
+	end, 1000)
 
 	-- local chan = vim.fn.sockconnect("tcp", address, { rpc = true })
 	--
@@ -492,7 +409,17 @@ function M.share_buf(bufnr)
 		desc = "Sharing " .. base_filename,
 		-- group = M.group, -- invalid group
 		buffer = connected_bufnr,
-		command = "set nomodified",
+		-- command = "set nomodified",
+		command = "lua Multiplayer.coop.join_sync_buf(" .. connected_bufnr .. ") | set nomodified",
+	})
+
+	vim.api.nvim_create_autocmd("BufWritePost", {
+		desc = "Sync Buffer on Write",
+		buffer = bufnr,
+		group = M.group,
+		callback = function()
+			M.host_sync_buf(bufnr)
+		end,
 	})
 
 	-- set all the lines in the new buffer
@@ -512,6 +439,28 @@ function M.share_buf(bufnr)
 	vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
 end
 
+-- Host calls to sync to the connected client(s)
+function M.host_sync_buf(bufnr)
+	bufnr = bufnr or 0
+
+	local connected_bufnr = vim.api.nvim_buf_get_var(bufnr, "multiplayer_bufnr")
+
+	-- set all the lines in the new buffer
+	local all_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+	vim.rpcrequest(M.channel, "nvim_buf_set_lines", connected_bufnr, 0, -1, false, all_lines)
+end
+
+-- Client calls to sync from the host
+function M.join_sync_buf(bufnr)
+	bufnr = bufnr or 0
+
+	local connected_bufnr = vim.api.nvim_buf_get_var(bufnr, "multiplayer_bufnr")
+
+	local all_lines = vim.rpcrequest(M.channel, "nvim_buf_get_lines", connected_bufnr, 0, -1, false)
+
+	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, all_lines)
+end
+
 -- takes a table as an argument with the keys
 -- type = "lines" | "bytes"
 -- start_row
@@ -519,6 +468,7 @@ end
 -- end_row
 -- end_col
 -- content
+-- NOTE: unused
 function M.apply_edit(edit)
 	-- this is definitely not done
 	if edit.type == "lines" then

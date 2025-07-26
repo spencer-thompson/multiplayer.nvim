@@ -57,12 +57,6 @@ Multiplayer.setup = function(opts)
 		if args.fargs[1] == "host" then
 			Multiplayer.coop.host()
 		end
-		if args.fargs[1] == "hj" then
-			Multiplayer.coop.host_job()
-		end
-		if args.fargs[1] == "jj" then
-			Multiplayer.coop.join_job(vim.fn.input("Paste Ticket"))
-		end
 		if args.fargs[1] == "join" then
 			Multiplayer.coop.join(vim.fn.input("Paste Ticket"))
 		end
@@ -85,7 +79,7 @@ Multiplayer.setup = function(opts)
 
 		complete = function(ArgLead, CmdLine, CursorPos)
 			-- return completion candidates as a list-like table
-			return { "host", "join", "send" }
+			return { "host", "join", "send", "share" }
 		end,
 	})
 	-- DUMBPIPE
