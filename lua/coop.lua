@@ -4,7 +4,7 @@
 --
 --
 --
--- some new text
+-- some new text new
 
 local Job = require("plenary.job")
 local uv = vim.uv
@@ -94,7 +94,7 @@ function M.track_edits(bufnr)
 
 		on_lines = function(lines, buf, cgt, flc, llc, llu, bcp)
 			vim.print({ cgt, flc, llc, llu, bcp })
-			local content = vim.api.nvim_buf_get_lines(buf, flc, llc, false)
+			local content = vim.api.nvim_buf_get_lines(buf, flc, llu, false)
 			-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
 			-- local line_count = vim.api.nvim_buf_get
 			local line_count = vim.api.nvim_buf_line_count(buf)
@@ -105,7 +105,7 @@ function M.track_edits(bufnr)
 				M.channel,
 				"nvim_exec_lua",
 				[[return Multiplayer.coop.apply_edits(...)]],
-				{ content, buf, flc, llc }
+				{ content, buf, flc, llc, llu, line_count }
 			)
 
 			-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
@@ -129,26 +129,31 @@ function M.track_edits(bufnr)
 	})
 end
 
-function M.apply_edits(lines, buf, flc, llc)
+function M.apply_edits(lines, buf, flc, llc, llu, line_count)
 	local connected_bufnr = vim.api.nvim_buf_get_var(0, "multiplayer_bufnr")
 	if connected_bufnr == buf then
 		-- local content = vim.api.nvim_buf_get_lines(0, flc, llc, false)
-		local line_count = vim.api.nvim_buf_line_count(buf)
-		if
-			M.last_edit.content == lines
-			and M.last_edit.flc == flc
-			and M.last_edit.llc == llc
-			-- and line_count == M.last_edit.line_count
-		then
-			M.last_edit = {
-				content = nil,
-				flc = nil,
-				llc = nil,
-				buf = nil,
-				line_count = nil,
-			}
-			return
-		end
+		-- local local_line_count = vim.api.nvim_buf_line_count(buf)
+
+		vim.api.nvim_buf_set_lines(0, flc, llu, false, lines)
+
+		-- if line_count == local_line_count then
+		-- end
+		-- if
+		-- 	M.last_edit.content == lines
+		-- 	and M.last_edit.flc == flc
+		-- 	and M.last_edit.llc == llc
+		-- 	-- and line_count == M.last_edit.line_count
+		-- then
+		-- 	M.last_edit = {
+		-- 		content = nil,
+		-- 		flc = nil,
+		-- 		llc = nil,
+		-- 		buf = nil,
+		-- 		line_count = nil,
+		-- 	}
+		-- 	return
+		-- end
 
 		-- M.last_edit = lines
 		-- if M.last_edit ==
@@ -171,6 +176,7 @@ function M.test_track_edits(bufnr)
 				llc,
 				llu,
 				-- bcp
+				vim.api.nvim_buf_get_lines(0, flc, llc, false),
 				vim.api.nvim_buf_get_lines(0, flc, llu, false),
 			})
 		end,
