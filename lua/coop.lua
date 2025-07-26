@@ -3,7 +3,7 @@
 -- + one for buffer updates
 -- some new tet
 -- s
--- some new text new
+-- Some new text
 
 local Job = require("plenary.job")
 local uv = vim.uv
@@ -133,8 +133,8 @@ function M.apply_edits(lines, buf, flc, llc, llu, line_count)
 	if connected_bufnr == buf then
 		-- local content = vim.api.nvim_buf_get_lines(0, flc, llc, false)
 		-- local local_line_count = vim.api.nvim_buf_line_count(buf)
-
-		vim.api.nvim_buf_set_lines(0, flc, llu, false, lines)
+		-- local local_line_count = vim.api.nvim_buf_line_count(buf)
+		vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
 
 		-- if line_count == local_line_count then
 		-- end
