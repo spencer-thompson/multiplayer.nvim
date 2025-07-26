@@ -457,8 +457,8 @@ function M.share_buf(bufnr)
 	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "multiplayer_bufnr", bufnr)
 
 	-- recursive 🙃
-	-- M.track_edits(bufnr)
-	-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
+	M.track_edits(bufnr)
+	vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
 end
 
 -- takes a table as an argument with the keys
