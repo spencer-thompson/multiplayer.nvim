@@ -29,6 +29,7 @@ function M.init()
 		llu = nil,
 		buf = nil,
 		line_count = nil,
+		client_number = nil,
 	}
 end
 
@@ -90,27 +91,40 @@ function M.track_cursor()
 end
 
 function M.track_edits(bufnr)
+	-- NOTE: Maybe I can see who the last edit was made by,
+	-- and if it was not made by me don't send it.
+	M.last_edit.client_number = M.client_number
 	vim.api.nvim_buf_attach(bufnr, true, {
 
 		on_lines = function(lines, buf, cgt, flc, llc, llu, bcp)
-			vim.print({ cgt, flc, llc, llu, bcp })
-			local content = vim.api.nvim_buf_get_lines(buf, flc, llu, false)
-			-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
-			-- local line_count = vim.api.nvim_buf_get
-			local line_count = vim.api.nvim_buf_line_count(buf)
+			if M.last_edit.client_number == M.client_number then
+				-- vim.print({ cgt, flc, llc, llu, bcp })
+				local content = vim.api.nvim_buf_get_lines(buf, flc, llu, false)
+				-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
+				-- local line_count = vim.api.nvim_buf_get
+				local line_count = vim.api.nvim_buf_line_count(buf)
 
-			M.last_edit = { buf = buf, flc = flc, llc = llc, llu = llu, content = content, line_count = line_count }
+				M.last_edit = {
+					buf = buf,
+					flc = flc,
+					llc = llc,
+					llu = llu,
+					client_number = M.client_number,
+					content = content,
+					line_count = line_count,
+				}
 
-			local remote_bufnr = vim.api.nvim_buf_get_var(buf, "multiplayer_bufnr")
+				local remote_bufnr = vim.api.nvim_buf_get_var(buf, "multiplayer_bufnr")
 
-			local clientnr = M.client_number
+				local clientnr = M.client_number
 
-			vim.rpcnotify(
-				M.channel,
-				"nvim_exec_lua",
-				[[return Multiplayer.coop.apply_edits(...)]],
-				{ content, remote_bufnr, flc, llc, llu, clientnr }
-			)
+				vim.rpcnotify(
+					M.channel,
+					"nvim_exec_lua",
+					[[return Multiplayer.coop.apply_edits(...)]],
+					{ content, remote_bufnr, flc, llc, llu, clientnr }
+				)
+			end
 
 			-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
 		end,
@@ -137,10 +151,12 @@ function M.apply_edits(lines, buf, flc, llc, llu, clientnr)
 	-- vim.api.nvim_buf_set_lines(buf, flc, llc, false, lines)
 	local connected_bufnr = vim.api.nvim_buf_get_var(0, "multiplayer_bufnr")
 
+	M.last_edit.client_number = clientnr
+
 	-- TODO:
-	if M.client_number ~= clientnr then
-		vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
-	end
+	-- if M.client_number ~= M.last_edit.client_number then
+	vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
+	-- end
 
 	-- if connected_bufnr == buf then
 	-- 	-- local content = vim.api.nvim_buf_get_lines(0, flc, llc, false)
