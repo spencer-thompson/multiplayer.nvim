@@ -98,7 +98,9 @@ function M.track_edits(bufnr)
 	vim.api.nvim_buf_attach(bufnr, true, {
 
 		on_lines = function(lines, buf, cgt, flc, llc, llu, bcp)
-			if M.last_edit.client_number == M.client_number then
+			if M.last_edit.client_number ~= M.client_number then
+				M.last_edit.client_number = M.client_number
+			else
 				-- vim.print({ cgt, flc, llc, llu, bcp })
 				local content = vim.api.nvim_buf_get_lines(buf, flc, llu, false)
 				-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
@@ -125,6 +127,7 @@ function M.track_edits(bufnr)
 					[[return Multiplayer.coop.apply_edits(...)]],
 					{ content, remote_bufnr, flc, llc, llu, clientnr }
 				)
+				-- M.last_edit.client_number
 			end
 
 			-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
