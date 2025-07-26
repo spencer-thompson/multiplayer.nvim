@@ -80,7 +80,7 @@ function M.track_cursor()
 						M.channel,
 						"nvim_exec_lua",
 						[[return Multiplayer.coop.render_cursor(...)]],
-						{ connected_bufnr, mark_letter, mode.mode, vmarks, curpos }
+						{ connected_bufnr, mark_letter, mode.mode, vmarks }
 					)
 				end
 			end
@@ -335,17 +335,20 @@ function M.on_connect(role)
 	M.active = true
 end
 
-function M.render_cursor(bufnr, letter, mode, vmarks, curpos)
+function M.render_cursor(bufnr, letter, mode, vmarks)
 	-- this function assumes that the mark is set for other players cursor position
 	bufnr = bufnr or 0
 	if vim.api.nvim_buf_get_var(bufnr, "sharing") then
 		letter = letter or "p"
 
-		local markpos = curpos
-		local mark_set = vim.api.nvim_buf_set_mark(bufnr, letter, curpos[1], curpos[2], {})
-		if not mark_set then
-			markpos = vim.api.nvim_buf_get_mark(bufnr, letter)
-		end
+		local markpos = vim.api.nvim_buf_get_mark(bufnr, letter)
+
+		-- local markpos = curpos
+		-- local mark_set = vim.api.nvim_buf_set_mark(bufnr, letter, curpos[1], curpos[2], {})
+		-- if not mark_set then
+		-- 	markpos = vim.api.nvim_buf_get_mark(bufnr, letter)
+		-- end
+
 		-- vim.api.nvim_buf_clear_namespace(bufnr, M.ns_id, 0, -1)
 		vim.api.nvim_buf_clear_namespace(bufnr, M.vns_id, 0, -1)
 		if mode == "n" then
