@@ -89,8 +89,6 @@ function M.track_cursor()
 end
 
 function M.track_edits(bufnr)
-	-- NOTE: Maybe I can see who the last edit was made by,
-	-- and if it was not made by me don't send it.
 	M.last_edit.client_number = M.client_number
 	vim.api.nvim_buf_attach(bufnr, true, {
 
@@ -185,6 +183,29 @@ function M.cleanup()
 		end,
 	})
 end
+
+-- function M.dp(mode, address, ticket)
+-- 	local args = {}
+-- 	if mode == "host" then
+-- 		args = { "listen-tcp", "--host", address }
+-- 	elseif mode == "join" then
+-- 		args = { "connect-tcp", "--addr", address, ticket }
+-- 	end
+-- 	local handle, pid = uv.spawn("dumbpipe", { args = args }, function(code, signal)
+-- 		vim.print(code)
+-- 		vim.print(signal)
+-- 	end)
+--
+-- 	vim.api.nvim_create_autocmd("VimLeavePre", {
+-- 		desc = "Cleanup UV",
+-- 		pattern = "*",
+-- 		group = M.group,
+-- 		callback = function()
+-- 			-- M.dumbpipe:shutdown()
+-- 			uv.process_kill(handle, "sigterm")
+-- 		end,
+-- 	})
+-- end
 
 function M.host(port)
 	M.init()

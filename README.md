@@ -12,9 +12,16 @@
 ```lua
 {
   "spencer-thompson/multiplayer.nvim",
+  build = 'cd comms; cargo build --release',
   opts = {}
 },
 ```
+
+## Usage
+
+`:Coop host`
+
+`:Coop join`
 
 ## Overview
 

@@ -27,7 +27,7 @@ M.lib = ffi.load(libname)
 
 M.port = function()
 	local open_port = M.lib.get_open_port()
-	vim.print("Open port:", open_port)
+	-- vim.print("Open port:", open_port)
 	return open_port
 end
 
