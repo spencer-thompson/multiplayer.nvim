@@ -20,7 +20,9 @@ M.players = {}
 
 M.active = false
 
-M.username = state.config.username
+function M.init()
+	M.username = state.config.username
+end
 
 -- This will eventually replace plenary
 function M.start_connection_process(port)
@@ -135,6 +137,7 @@ function M.cleanup()
 end
 
 function M.host(port)
+	M.init()
 	port = port or Multiplayer.rust.port()
 	local dumbpipe = Job:new({
 		command = "dumbpipe",
@@ -246,6 +249,7 @@ function M.join_job(ticket)
 end
 
 function M.join(ticket, port)
+	M.init()
 	port = port or Multiplayer.rust.port()
 	-- port = port or 6969
 	local address = "0.0.0.0:" .. port
@@ -297,45 +301,39 @@ function M.join(ticket, port)
 	-- 	i = i + 1
 	-- end)
 	-- local test_address = "127.0.0.1:" .. port
-
-	-- dumbpipe:start()
-	local chan = vim.fn.sockconnect("tcp", address, { rpc = true })
-	-- local ok, chan = pcall(vim.fn.sockconnect, "tcp", test_address, { rpc = true })
-	-- vim.print(chan)
-	-- if ok and chan then
-	-- 	M.channel = chan
-	-- end
-	-- local address = vim.fn.serverstart("0.0.0.0:" .. port)
-
-	M.channel = chan
-
-	-- M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
-	-- M.username = vim.trim(M.username)
 	--
-	-- vim.rpcrequest(
-	-- 	M.channel,
-	-- 	"nvim_set_client_info",
-	-- 	"Multiplayer",
-	-- 	{},
-	-- 	"host",
-	-- 	{},
-	-- 	{ git_username = M.username, buf = vim.api.nvim_get_current_buf() }
-	-- )
-	M.on_connect("join")
+	vim.defer_fn(function()
+		local chan = vim.fn.sockconnect("tcp", address, { rpc = true })
+		vim.print(chan)
+		M.channel = chan
 
-	M.dumbpipe = dumbpipe
+		M.on_connect("join")
 
-	M.cleanup()
-	M.track_cursor()
+		M.dumbpipe = dumbpipe
 
-	return chan
+		M.cleanup()
+		M.track_cursor()
+	end, 2000)
+
+	-- local chan = vim.fn.sockconnect("tcp", address, { rpc = true })
+	--
+	-- M.channel = chan
+	--
+	-- M.on_connect("join")
+	--
+	-- M.dumbpipe = dumbpipe
+	--
+	-- M.cleanup()
+	-- M.track_cursor()
+	--
+	-- return chan
 end
 
 function M.on_connect(role)
 	-- M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
 	-- M.username = vim.trim(M.username)
 
-	vim.rpcnotify(
+	vim.rpcrequest(
 		M.channel,
 		"nvim_set_client_info",
 		"Multiplayer",
