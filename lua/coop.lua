@@ -3,6 +3,7 @@
 -- + one for buffer updates
 -- s
 -- Some new text
+-- some text
 
 local Job = require("plenary.job")
 local uv = vim.uv
@@ -104,15 +105,15 @@ function M.track_edits(bufnr)
 				-- local line_count = vim.api.nvim_buf_get
 				local line_count = vim.api.nvim_buf_line_count(buf)
 
-				M.last_edit = {
-					buf = buf,
-					flc = flc,
-					llc = llc,
-					llu = llu,
-					client_number = M.client_number,
-					content = content,
-					line_count = line_count,
-				}
+				-- M.last_edit = {
+				-- 	buf = buf,
+				-- 	flc = flc,
+				-- 	llc = llc,
+				-- 	llu = llu,
+				-- 	client_number = M.client_number,
+				-- 	content = content,
+				-- 	line_count = line_count,
+				-- }
 
 				local remote_bufnr = vim.api.nvim_buf_get_var(buf, "multiplayer_bufnr")
 
