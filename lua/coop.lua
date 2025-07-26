@@ -22,6 +22,13 @@ M.active = false
 
 function M.init()
 	M.username = state.config.username
+	M.last_edit = {
+		content = nil,
+		flc = nil,
+		llc = nil,
+		buf = nil,
+		line_count = nil,
+	}
 end
 
 -- This will eventually replace plenary
@@ -88,6 +95,11 @@ function M.track_edits(bufnr)
 			vim.print({ cgt, flc, llc, llu, bcp })
 			local content = vim.api.nvim_buf_get_lines(buf, flc, llc, false)
 			-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
+			-- local line_count = vim.api.nvim_buf_get
+			local line_count = vim.api.nvim_buf_line_count(buf)
+
+			M.last_edit = { buf = buf, flc = flc, llc = llc, content = content, line_count = line_count }
+
 			vim.rpcnotify(
 				M.channel,
 				"nvim_exec_lua",
@@ -117,13 +129,31 @@ function M.track_edits(bufnr)
 end
 
 function M.apply_edits(lines, buf, flc, llc)
-	vim.print("ya")
 	local connected_bufnr = vim.api.nvim_buf_get_var(0, "multiplayer_bufnr")
 	if connected_bufnr == buf then
-		local content = vim.api.nvim_buf_get_lines(0, flc, llc, false)
-		if content ~= lines then
-			vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
+		-- local content = vim.api.nvim_buf_get_lines(0, flc, llc, false)
+		local line_count = vim.api.nvim_buf_line_count(buf)
+		if
+			M.last_edit.content == lines
+			and M.last_edit.flc == flc
+			and M.last_edit.llc == llc
+			and line_count == M.last_edit.line_count
+		then
+			M.last_edit = {
+				content = nil,
+				flc = nil,
+				llc = nil,
+				buf = nil,
+				line_count = nil,
+			}
+			return
 		end
+
+		-- M.last_edit = lines
+		-- if M.last_edit ==
+		-- if content ~= lines then
+		vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
+		-- end
 	end
 	-- loca connected_bufnr = vim.api.nvim_buf_get_var(0, )
 end
