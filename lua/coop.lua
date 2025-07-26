@@ -88,6 +88,14 @@ function M.track_edits(bufnr)
 			vim.print({ cgt, flc, llc, llu, bcp })
 			local content = vim.api.nvim_buf_get_lines(buf, flc, llc, false)
 			-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
+			vim.rpcnotify(
+				M.channel,
+				"nvim_exec_lua",
+				[[return Multiplayer.coop.apply_edits(...)]],
+				{ content, buf, flc, llc }
+			)
+
+			-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
 		end,
 
 		on_changedtick = function(changed_tick, buf, cgt)
@@ -106,6 +114,18 @@ function M.track_edits(bufnr)
 			-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, 0, -1, false, content)
 		end,
 	})
+end
+
+function M.apply_edits(lines, buf, flc, llc)
+	vim.print("ya")
+	local connected_bufnr = vim.api.nvim_buf_get_var(0, "multiplayer_bufnr")
+	if connected_bufnr == buf then
+		local content = vim.api.nvim_buf_get_lines(0, flc, llc, false)
+		if content ~= lines then
+			vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
+		end
+	end
+	-- loca connected_bufnr = vim.api.nvim_buf_get_var(0, )
 end
 
 function M.test_track_edits(bufnr)
