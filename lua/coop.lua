@@ -4,6 +4,7 @@
 --
 --
 --
+-- some new text
 
 local Job = require("plenary.job")
 local uv = vim.uv
@@ -137,7 +138,7 @@ function M.apply_edits(lines, buf, flc, llc)
 			M.last_edit.content == lines
 			and M.last_edit.flc == flc
 			and M.last_edit.llc == llc
-			and line_count == M.last_edit.line_count
+			-- and line_count == M.last_edit.line_count
 		then
 			M.last_edit = {
 				content = nil,
