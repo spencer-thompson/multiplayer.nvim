@@ -247,6 +247,7 @@ end
 
 function M.join(ticket, port)
 	port = port or Multiplayer.rust.port()
+	-- port = port or 6969
 	local address = "0.0.0.0:" .. port
 	-- local address = "0.0.0.0:6666"
 	-- local address = "127.0.0.1:" .. port
@@ -260,14 +261,16 @@ function M.join(ticket, port)
 			ticket,
 		},
 		on_stdout = function(error, data)
-			vim.print(error)
+			-- vim.print(error)
 			vim.print(data)
 		end,
 		on_stderr = function(error, data)
 			vim.print(error)
 			vim.print(data)
 		end,
-	}):start()
+	})
+
+	dumbpipe:start()
 
 	-- vim.print("the port should be " .. port)
 	-- local timer = vim.uv.new_timer()
@@ -277,7 +280,7 @@ function M.join(ticket, port)
 	-- timer:close()
 	--
 	--
-	vim.print(address)
+	-- vim.print(address)
 	-- local timer = vim.uv.new_timer()
 	-- local i = 0
 	-- timer:start(1000, 1000, function()
@@ -293,10 +296,10 @@ function M.join(ticket, port)
 	-- 	end
 	-- 	i = i + 1
 	-- end)
-	local test_address = "127.0.0.1:" .. port
+	-- local test_address = "127.0.0.1:" .. port
 
 	-- dumbpipe:start()
-	local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. port, { rpc = true })
+	local chan = vim.fn.sockconnect("tcp", address, { rpc = true })
 	-- local ok, chan = pcall(vim.fn.sockconnect, "tcp", test_address, { rpc = true })
 	-- vim.print(chan)
 	-- if ok and chan then
