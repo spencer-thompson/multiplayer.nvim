@@ -1,9 +1,8 @@
 -- Essentially there need to be two autocmds:
 -- + one for cursors (location)
 -- + one for buffer updates
---
---
---
+-- some new tet
+-- s
 -- some new text new
 
 local Job = require("plenary.job")
@@ -158,7 +157,7 @@ function M.apply_edits(lines, buf, flc, llc, llu, line_count)
 		-- M.last_edit = lines
 		-- if M.last_edit ==
 		-- if content ~= lines then
-		vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
+		-- vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
 		-- end
 	end
 	-- loca connected_bufnr = vim.api.nvim_buf_get_var(0, )
@@ -493,7 +492,6 @@ function M.share_buf(bufnr)
 	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "sharing", true)
 	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "multiplayer_bufnr", bufnr)
 
-	-- recursive 🙃
 	M.track_edits(bufnr)
 	vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
 end
