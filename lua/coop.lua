@@ -1,9 +1,6 @@
 -- Essentially there need to be two autocmds:
 -- + one for cursors (location)
 -- + one for buffer updates
--- s
--- Some new text
--- some text
 
 local Job = require("plenary.job")
 local uv = vim.uv
@@ -157,42 +154,7 @@ function M.apply_edits(lines, buf, flc, llc, llu, clientnr)
 
 	M.last_edit.client_number = clientnr
 
-	-- TODO:
-	-- if M.client_number ~= M.last_edit.client_number then
-	vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
-	-- end
-
-	-- if connected_bufnr == buf then
-	-- 	-- local content = vim.api.nvim_buf_get_lines(0, flc, llc, false)
-	-- 	-- local local_line_count = vim.api.nvim_buf_line_count(buf)
-	-- 	-- local local_line_count = vim.api.nvim_buf_line_count(buf)
-	-- 	vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
-	--
-	-- 	-- if line_count == local_line_count then
-	-- 	-- end
-	-- 	-- if
-	-- 	-- 	M.last_edit.content == lines
-	-- 	-- 	and M.last_edit.flc == flc
-	-- 	-- 	and M.last_edit.llc == llc
-	-- 	-- 	-- and line_count == M.last_edit.line_count
-	-- 	-- then
-	-- 	-- 	M.last_edit = {
-	-- 	-- 		content = nil,
-	-- 	-- 		flc = nil,
-	-- 	-- 		llc = nil,
-	-- 	-- 		buf = nil,
-	-- 	-- 		line_count = nil,
-	-- 	-- 	}
-	-- 	-- 	return
-	-- 	-- end
-	--
-	-- 	-- M.last_edit = lines
-	-- 	-- if M.last_edit ==
-	-- 	-- if content ~= lines then
-	-- 	-- vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
-	-- 	-- end
-	-- end
-	-- loca connected_bufnr = vim.api.nvim_buf_get_var(0, )
+	vim.api.nvim_buf_set_lines(buf, flc, llc, false, lines)
 end
 
 function M.test_track_edits(bufnr)
