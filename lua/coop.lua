@@ -20,11 +20,13 @@ M.players = {}
 M.active = false
 
 function M.init()
+	M.client_number = 1
 	M.username = state.config.username
 	M.last_edit = {
 		content = nil,
 		flc = nil,
 		llc = nil,
+		llu = nil,
 		buf = nil,
 		line_count = nil,
 	}
@@ -97,15 +99,17 @@ function M.track_edits(bufnr)
 			-- local line_count = vim.api.nvim_buf_get
 			local line_count = vim.api.nvim_buf_line_count(buf)
 
-			M.last_edit = { buf = buf, flc = flc, llc = llc, content = content, line_count = line_count }
+			M.last_edit = { buf = buf, flc = flc, llc = llc, llu = llu, content = content, line_count = line_count }
 
 			local remote_bufnr = vim.api.nvim_buf_get_var(buf, "multiplayer_bufnr")
+
+			local clientnr = M.client_number
 
 			vim.rpcnotify(
 				M.channel,
 				"nvim_exec_lua",
 				[[return Multiplayer.coop.apply_edits(...)]],
-				{ content, remote_bufnr, flc, llc, llu, line_count }
+				{ content, remote_bufnr, flc, llc, llu, clientnr }
 			)
 
 			-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
@@ -129,38 +133,44 @@ function M.track_edits(bufnr)
 	})
 end
 
-function M.apply_edits(lines, buf, flc, llc, llu, line_count)
-	vim.api.nvim_buf_set_lines(buf, flc, llc, false, lines)
-	-- local connected_bufnr = vim.api.nvim_buf_get_var(0, "multiplayer_bufnr")
+function M.apply_edits(lines, buf, flc, llc, llu, clientnr)
+	-- vim.api.nvim_buf_set_lines(buf, flc, llc, false, lines)
+	local connected_bufnr = vim.api.nvim_buf_get_var(0, "multiplayer_bufnr")
+
+	-- TODO:
+	if M.client_number ~= clientnr then
+		vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
+	end
+
 	-- if connected_bufnr == buf then
-	-- local content = vim.api.nvim_buf_get_lines(0, flc, llc, false)
-	-- local local_line_count = vim.api.nvim_buf_line_count(buf)
-	-- local local_line_count = vim.api.nvim_buf_line_count(buf)
-	-- vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
-
-	-- if line_count == local_line_count then
-	-- end
-	-- if
-	-- 	M.last_edit.content == lines
-	-- 	and M.last_edit.flc == flc
-	-- 	and M.last_edit.llc == llc
-	-- 	-- and line_count == M.last_edit.line_count
-	-- then
-	-- 	M.last_edit = {
-	-- 		content = nil,
-	-- 		flc = nil,
-	-- 		llc = nil,
-	-- 		buf = nil,
-	-- 		line_count = nil,
-	-- 	}
-	-- 	return
-	-- end
-
-	-- M.last_edit = lines
-	-- if M.last_edit ==
-	-- if content ~= lines then
-	-- vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
-	-- end
+	-- 	-- local content = vim.api.nvim_buf_get_lines(0, flc, llc, false)
+	-- 	-- local local_line_count = vim.api.nvim_buf_line_count(buf)
+	-- 	-- local local_line_count = vim.api.nvim_buf_line_count(buf)
+	-- 	vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
+	--
+	-- 	-- if line_count == local_line_count then
+	-- 	-- end
+	-- 	-- if
+	-- 	-- 	M.last_edit.content == lines
+	-- 	-- 	and M.last_edit.flc == flc
+	-- 	-- 	and M.last_edit.llc == llc
+	-- 	-- 	-- and line_count == M.last_edit.line_count
+	-- 	-- then
+	-- 	-- 	M.last_edit = {
+	-- 	-- 		content = nil,
+	-- 	-- 		flc = nil,
+	-- 	-- 		llc = nil,
+	-- 	-- 		buf = nil,
+	-- 	-- 		line_count = nil,
+	-- 	-- 	}
+	-- 	-- 	return
+	-- 	-- end
+	--
+	-- 	-- M.last_edit = lines
+	-- 	-- if M.last_edit ==
+	-- 	-- if content ~= lines then
+	-- 	-- vim.api.nvim_buf_set_lines(0, flc, llc, false, lines)
+	-- 	-- end
 	-- end
 	-- loca connected_bufnr = vim.api.nvim_buf_get_var(0, )
 end
@@ -308,6 +318,7 @@ end
 
 function M.join(ticket, port)
 	M.init()
+	M.client_number = 2 -- HACK:
 	port = port or Multiplayer.rust.port()
 	-- port = port or 6969
 	local address = "0.0.0.0:" .. port
