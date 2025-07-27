@@ -255,7 +255,8 @@ async fn join_tcp(args: JoinArgs) -> anyhow::Result<()> {
         let alpn = ALPN.to_vec();
         tokio::spawn(async move {
             if let Err(cause) = handle_tcp_accept(next, addr, endpoint, &alpn).await {
-                panic!("Error handling connection: {cause}")
+                eprintln!("Error handling connection: {cause}")
+                // panic!("Error handling connection: {cause}")
                 // log error at warn level
                 //
                 // we should know about it, but it's not fatal
