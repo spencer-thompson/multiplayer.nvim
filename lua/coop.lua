@@ -209,34 +209,34 @@ end
 
 function M.host(port)
 	M.init()
-	port = port or Multiplayer.rust.port()
-	local dumbpipe = Job:new({
-		command = "dumbpipe",
-		args = {
-			"listen-tcp",
-			"--host",
-			"0.0.0.0:" .. port,
-		},
-		interactive = false,
-		on_start = function()
-			vim.print("started")
-		end,
-		on_stdout = function(error, data)
-			vim.print(error)
-			vim.print(data)
-		end,
-		on_stderr = function(error, data)
-			vim.print(error)
-			vim.print(data)
-		end,
-	})
+	-- port = port or Multiplayer.rust.port()
+	-- local dumbpipe = Job:new({
+	-- 	command = "dumbpipe",
+	-- 	args = {
+	-- 		"listen-tcp",
+	-- 		"--host",
+	-- 		"0.0.0.0:" .. port,
+	-- 	},
+	-- 	interactive = false,
+	-- 	on_start = function()
+	-- 		vim.print("started")
+	-- 	end,
+	-- 	on_stdout = function(error, data)
+	-- 		vim.print(error)
+	-- 		vim.print(data)
+	-- 	end,
+	-- 	on_stderr = function(error, data)
+	-- 		vim.print(error)
+	-- 		vim.print(data)
+	-- 	end,
+	-- })
 
-	-- Multiplayer.comms.start("host")
+	Multiplayer.comms.start("host")
 
-	local address = vim.fn.serverstart("0.0.0.0:" .. port)
-	-- local address = vim.fn.serverstart("0.0.0.0:" .. Multiplayer.comms.port)
+	-- local address = vim.fn.serverstart("0.0.0.0:" .. port)
+	local address = vim.fn.serverstart("0.0.0.0:" .. Multiplayer.comms.port)
 
-	dumbpipe:start()
+	-- dumbpipe:start()
 
 	vim.api.nvim_create_autocmd("ChanInfo", {
 		desc = "Detect New Client",
@@ -259,7 +259,7 @@ function M.host(port)
 
 	-- M.dumbpipe = dumbpipe
 
-	M.cleanup()
+	-- M.cleanup()
 	M.track_cursor()
 
 	vim.print(address)
@@ -269,36 +269,36 @@ end
 function M.join(ticket, port)
 	M.init()
 	M.client_number = 2 -- HACK:
-	port = port or Multiplayer.rust.port()
-	-- port = port or 6969
-	local address = "0.0.0.0:" .. port
-	vim.print(address)
-	local dumbpipe = Job:new({
-		command = "dumbpipe",
-		args = {
-			"connect-tcp",
-			"--addr",
-			address,
-			ticket,
-		},
-		on_stdout = function(error, data)
-			-- vim.print(error)
-			vim.print(data)
-		end,
-		on_stderr = function(error, data)
-			vim.print(error)
-			vim.print(data)
-		end,
-	})
+	-- port = port or Multiplayer.rust.port()
+	-- -- port = port or 6969
+	-- local address = "0.0.0.0:" .. port
+	-- vim.print(address)
+	-- local dumbpipe = Job:new({
+	-- 	command = "dumbpipe",
+	-- 	args = {
+	-- 		"connect-tcp",
+	-- 		"--addr",
+	-- 		address,
+	-- 		ticket,
+	-- 	},
+	-- 	on_stdout = function(error, data)
+	-- 		-- vim.print(error)
+	-- 		vim.print(data)
+	-- 	end,
+	-- 	on_stderr = function(error, data)
+	-- 		vim.print(error)
+	-- 		vim.print(data)
+	-- 	end,
+	-- })
+	--
+	-- dumbpipe:start()
 
-	dumbpipe:start()
-
-	-- Multiplayer.comms.start("join", ticket)
+	Multiplayer.comms.start("join", ticket)
 
 	-- we have to wait just a bit for the socket to connect
 	vim.defer_fn(function()
-		-- local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. Multiplayer.comms.port, { rpc = true })
-		local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. port, { rpc = true })
+		local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. Multiplayer.comms.port, { rpc = true })
+		-- local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. port, { rpc = true })
 		vim.print(chan)
 		M.channel = chan
 
@@ -306,7 +306,7 @@ function M.join(ticket, port)
 
 		-- M.dumbpipe = dumbpipe
 
-		M.cleanup()
+		-- M.cleanup()
 		M.track_cursor()
 	end, 5000)
 
