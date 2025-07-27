@@ -255,12 +255,12 @@ async fn join_tcp(args: JoinArgs) -> anyhow::Result<()> {
         let alpn = ALPN.to_vec();
         tokio::spawn(async move {
             if let Err(cause) = handle_tcp_accept(next, addr, endpoint, &alpn).await {
-                eprintln!("Error handling connection: {cause}")
-                // panic!("Error handling connection: {cause}")
-                // log error at warn level
-                //
-                // we should know about it, but it's not fatal
-                // tracing::warn!("error handling connection: {}", cause);
+                eprintln!("Error handling connection: {cause}") // NOTE: There is an error here
+                                                                // panic!("Error handling connection: {cause}")
+                                                                // log error at warn level
+                                                                //
+                                                                // we should know about it, but it's not fatal
+                                                                // tracing::warn!("error handling connection: {}", cause);
             }
         });
     }
@@ -321,6 +321,7 @@ async fn host_tcp(args: HostArgs) -> anyhow::Result<()> {
         // read the handshake and verify it
         let mut buf = [0u8; HANDSHAKE.len()];
         r.read_exact(&mut buf).await?;
+        anyhow::ensure!(buf == HANDSHAKE, "invalid handshake");
         // snafu::ensure_whatever!(buf == HANDSHAKE, "invalid handshake");
         let connection = tokio::net::TcpStream::connect(addrs.as_slice())
             .await
