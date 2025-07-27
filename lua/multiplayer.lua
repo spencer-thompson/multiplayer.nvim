@@ -1,3 +1,4 @@
+-- NOTE: This file is a mess and needs to be cleaned up
 local Multiplayer = {}
 
 Multiplayer.ns_id = vim.api.nvim_create_namespace("Multiplayer")
@@ -12,6 +13,7 @@ Multiplayer.players = {}
 Multiplayer.coop = require("coop")
 
 Multiplayer.rust = require("rust")
+Multiplayer.comms = require("comms")
 
 local state = require("state")
 
