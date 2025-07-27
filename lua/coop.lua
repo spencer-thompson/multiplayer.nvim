@@ -234,7 +234,7 @@ function M.host(port)
 	Multiplayer.comms.start("host")
 
 	-- local address = vim.fn.serverstart("0.0.0.0:" .. port)
-	local address = vim.fn.serverstart(Multiplayer.comms.address)
+	local address = vim.fn.serverstart("0.0.0.0:" .. Multiplayer.comms.port)
 
 	-- dumbpipe:start()
 

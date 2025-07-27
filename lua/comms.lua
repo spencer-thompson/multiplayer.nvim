@@ -7,6 +7,7 @@ M.group = vim.api.nvim_create_augroup("Comms", { clear = true })
 function M.start(role, ticket)
 	ticket = ticket or nil
 	local port = Multiplayer.rust.port()
+	M.port = port
 
 	local stdin = uv.new_pipe()
 	local stdout = uv.new_pipe()
