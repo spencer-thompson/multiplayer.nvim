@@ -173,16 +173,16 @@ function M.test_track_edits(bufnr)
 		end,
 	})
 end
-function M.cleanup()
-	vim.api.nvim_create_autocmd("VimLeavePre", {
-		desc = "Cleanup",
-		pattern = "*",
-		group = M.group,
-		callback = function()
-			M.dumbpipe:shutdown()
-		end,
-	})
-end
+-- function M.cleanup()
+-- 	vim.api.nvim_create_autocmd("VimLeavePre", {
+-- 		desc = "Cleanup",
+-- 		pattern = "*",
+-- 		group = M.group,
+-- 		callback = function()
+-- 			M.dumbpipe:shutdown()
+-- 		end,
+-- 	})
+-- end
 
 -- function M.dp(mode, address, ticket)
 -- 	local args = {}
@@ -259,7 +259,7 @@ function M.host(port)
 
 	-- M.dumbpipe = dumbpipe
 
-	M.cleanup()
+	-- M.cleanup()
 	M.track_cursor()
 
 	vim.print(address)
@@ -297,7 +297,7 @@ function M.join(ticket, port)
 
 	-- we have to wait just a bit for the socket to connect
 	vim.defer_fn(function()
-		local chan = vim.fn.sockconnect("tcp", address, { rpc = true })
+		local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. Multiplayer.comms.port, { rpc = true })
 		vim.print(chan)
 		M.channel = chan
 
@@ -305,7 +305,7 @@ function M.join(ticket, port)
 
 		-- M.dumbpipe = dumbpipe
 
-		M.cleanup()
+		-- M.cleanup()
 		M.track_cursor()
 	end, 5000)
 
