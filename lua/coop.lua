@@ -120,7 +120,7 @@ function M.track_edits(bufnr)
 					M.channel,
 					"nvim_exec_lua",
 					[[return Multiplayer.coop.apply_edits(...)]],
-					{ content, remote_bufnr, flc, llc, llu, clientnr }
+					{ content, remote_bufnr, flc, llc, clientnr }
 				)
 				-- M.last_edit.client_number
 			end
@@ -146,7 +146,7 @@ function M.track_edits(bufnr)
 	})
 end
 
-function M.apply_edits(lines, buf, flc, llc, llu, clientnr)
+function M.apply_edits(lines, buf, flc, llc, clientnr)
 	-- vim.api.nvim_buf_set_lines(buf, flc, llc, false, lines)
 	local connected_bufnr = vim.api.nvim_buf_get_var(0, "multiplayer_bufnr")
 
@@ -429,7 +429,7 @@ function M.share_buf(bufnr)
 		command = "lua Multiplayer.coop.join_sync_buf(0)",
 	})
 
-	vim.api.nvim_create_autocmd("BufWritePre", {
+	vim.api.nvim_create_autocmd("BufWritePost", {
 		desc = "Sync Buffer on Write",
 		buffer = bufnr,
 		group = M.group,
@@ -459,11 +459,22 @@ end
 function M.host_sync_buf(bufnr)
 	bufnr = bufnr or 0
 
+	-- function M.apply_edits(lines, buf, flc, llc, clientnr)
+	--
+
 	local connected_bufnr = vim.api.nvim_buf_get_var(bufnr, "multiplayer_bufnr")
 
 	-- set all the lines in the new buffer
 	local all_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+	local clientnr = M.client_number
 	vim.rpcrequest(M.channel, "nvim_buf_set_lines", connected_bufnr, 0, -1, false, all_lines)
+
+	vim.rpcrequest(
+		M.channel,
+		"nvim_exec_lua",
+		[[return Multiplayer.coop.apply_edits(...)]],
+		{ all_lines, connected_bufnr, 0, -1, clientnr }
+	)
 end
 
 -- Client calls to sync from the host
