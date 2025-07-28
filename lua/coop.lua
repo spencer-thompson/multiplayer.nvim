@@ -2,7 +2,6 @@
 -- + one for cursors (location)
 -- + one for buffer updates
 
-local Job = require("plenary.job")
 local uv = vim.uv
 
 local state = require("state")
@@ -485,6 +484,7 @@ function M.join_sync_buf(bufnr)
 
 	local all_lines = vim.rpcrequest(M.channel, "nvim_buf_get_lines", connected_bufnr, 0, -1, false)
 
+	M.last_edit.client_number = -1
 	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, all_lines)
 
 	vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
