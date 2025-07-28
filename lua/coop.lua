@@ -252,7 +252,7 @@ function M.join(ticket, port)
 
 		-- M.cleanup()
 		M.track_cursor()
-	end, 1000)
+	end, 5000)
 
 	-- local chan = vim.fn.sockconnect("tcp", address, { rpc = true })
 	--
