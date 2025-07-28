@@ -28,6 +28,14 @@ function M.init()
 		line_count = nil,
 		client_number = nil,
 	}
+
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		desc = "Clear Autocmds",
+		pattern = "*",
+		callback = function()
+			vim.api.nvim_clear_autocmds({ group = M.group })
+		end,
+	})
 end
 
 -- This will eventually replace plenary
@@ -172,16 +180,16 @@ function M.test_track_edits(bufnr)
 		end,
 	})
 end
-function M.cleanup()
-	vim.api.nvim_create_autocmd("VimLeavePre", {
-		desc = "Cleanup",
-		pattern = "*",
-		group = M.group,
-		callback = function()
-			M.dumbpipe:shutdown()
-		end,
-	})
-end
+-- function M.cleanup()
+-- 	vim.api.nvim_create_autocmd("VimLeavePre", {
+-- 		desc = "Cleanup",
+-- 		pattern = "*",
+-- 		group = M.group,
+-- 		callback = function()
+-- 			M.dumbpipe:shutdown()
+-- 		end,
+-- 	})
+-- end
 
 -- function M.dp(mode, address, ticket)
 -- 	local args = {}
@@ -433,6 +441,8 @@ function M.share_buf(bufnr)
 		buffer = bufnr,
 		group = M.group,
 		callback = function()
+			-- NOTE: need to only call if connected
+			-- aka need to handle exit
 			M.host_sync_buf(bufnr)
 		end,
 	})
