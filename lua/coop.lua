@@ -429,7 +429,7 @@ function M.share_buf(bufnr)
 		command = "lua Multiplayer.coop.join_sync_buf(0)",
 	})
 
-	vim.api.nvim_create_autocmd("BufWritePost", {
+	vim.api.nvim_create_autocmd("BufWritePre", {
 		desc = "Sync Buffer on Write",
 		buffer = bufnr,
 		group = M.group,
@@ -470,13 +470,13 @@ end
 function M.join_sync_buf(bufnr)
 	bufnr = bufnr or 0
 
-	vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
-
 	local connected_bufnr = vim.api.nvim_buf_get_var(bufnr, "multiplayer_bufnr")
 
 	local all_lines = vim.rpcrequest(M.channel, "nvim_buf_get_lines", connected_bufnr, 0, -1, false)
 
 	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, all_lines)
+
+	vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
 end
 
 -- takes a table as an argument with the keys
