@@ -327,6 +327,8 @@ end
 function M.on_connect(role)
 	-- M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
 	-- M.username = vim.trim(M.username)
+	--
+	M.notify_send(M.channel, "hello")
 
 	vim.rpcrequest(
 		M.channel,
@@ -424,7 +426,7 @@ function M.share_buf(bufnr)
 		-- group = M.group, -- invalid group
 		buffer = connected_bufnr,
 		-- command = "set nomodified",
-		command = "lua Multiplayer.coop.join_sync_buf(" .. connected_bufnr .. ") | set nomodified",
+		command = 'lua Multiplayer.coop.join_sync_buf("0") | set nomodified',
 	})
 
 	vim.api.nvim_create_autocmd("BufWritePost", {
