@@ -180,63 +180,23 @@ function M.test_track_edits(bufnr)
 		end,
 	})
 end
--- function M.cleanup()
--- 	vim.api.nvim_create_autocmd("VimLeavePre", {
--- 		desc = "Cleanup",
--- 		pattern = "*",
--- 		group = M.group,
--- 		callback = function()
--- 			M.dumbpipe:shutdown()
--- 		end,
--- 	})
--- end
 
--- function M.dp(mode, address, ticket)
--- 	local args = {}
--- 	if mode == "host" then
--- 		args = { "listen-tcp", "--host", address }
--- 	elseif mode == "join" then
--- 		args = { "connect-tcp", "--addr", address, ticket }
--- 	end
--- 	local handle, pid = uv.spawn("dumbpipe", { args = args }, function(code, signal)
--- 		vim.print(code)
--- 		vim.print(signal)
--- 	end)
---
--- 	vim.api.nvim_create_autocmd("VimLeavePre", {
--- 		desc = "Cleanup UV",
--- 		pattern = "*",
--- 		group = M.group,
--- 		callback = function()
--- 			-- M.dumbpipe:shutdown()
--- 			uv.process_kill(handle, "sigterm")
--- 		end,
--- 	})
--- end
+function M.cleanup()
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		desc = "Disconnect Client",
+		pattern = "*",
+		callback = function()
+			vim.rpcnotify(M.channel, "nvim_exec_lua", { M.client_number })
+		end,
+	})
+end
+
+function M.disconnect(clientnr)
+	M.connected = false
+end
 
 function M.host(port)
 	M.init()
-	-- port = port or Multiplayer.rust.port()
-	-- local dumbpipe = Job:new({
-	-- 	command = "dumbpipe",
-	-- 	args = {
-	-- 		"listen-tcp",
-	-- 		"--host",
-	-- 		"0.0.0.0:" .. port,
-	-- 	},
-	-- 	interactive = false,
-	-- 	on_start = function()
-	-- 		vim.print("started")
-	-- 	end,
-	-- 	on_stdout = function(error, data)
-	-- 		vim.print(error)
-	-- 		vim.print(data)
-	-- 	end,
-	-- 	on_stderr = function(error, data)
-	-- 		vim.print(error)
-	-- 		vim.print(data)
-	-- 	end,
-	-- })
 
 	Multiplayer.comms.start("host")
 
@@ -276,29 +236,6 @@ end
 function M.join(ticket, port)
 	M.init()
 	M.client_number = 2 -- HACK:
-	-- port = port or Multiplayer.rust.port()
-	-- -- port = port or 6969
-	-- local address = "0.0.0.0:" .. port
-	-- vim.print(address)
-	-- local dumbpipe = Job:new({
-	-- 	command = "dumbpipe",
-	-- 	args = {
-	-- 		"connect-tcp",
-	-- 		"--addr",
-	-- 		address,
-	-- 		ticket,
-	-- 	},
-	-- 	on_stdout = function(error, data)
-	-- 		-- vim.print(error)
-	-- 		vim.print(data)
-	-- 	end,
-	-- 	on_stderr = function(error, data)
-	-- 		vim.print(error)
-	-- 		vim.print(data)
-	-- 	end,
-	-- })
-	--
-	-- dumbpipe:start()
 
 	Multiplayer.comms.start("join", ticket)
 
@@ -315,7 +252,7 @@ function M.join(ticket, port)
 
 		-- M.cleanup()
 		M.track_cursor()
-	end, 5000)
+	end, 1000)
 
 	-- local chan = vim.fn.sockconnect("tcp", address, { rpc = true })
 	--
@@ -335,7 +272,7 @@ function M.on_connect(role)
 	-- M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
 	-- M.username = vim.trim(M.username)
 	--
-	M.notify_send(M.channel, "hello")
+	M.notify_send(M.channel, "Connected")
 
 	vim.rpcrequest(
 		M.channel,
@@ -348,6 +285,7 @@ function M.on_connect(role)
 	)
 
 	M.active = true
+	M.connected = true
 end
 
 function M.render_cursor(bufnr, letter, mode, vmarks)
@@ -441,9 +379,9 @@ function M.share_buf(bufnr)
 		buffer = bufnr,
 		group = M.group,
 		callback = function()
-			-- NOTE: need to only call if connected
-			-- aka need to handle exit
-			M.host_sync_buf(bufnr)
+			if M.connected then
+				M.host_sync_buf(bufnr)
+			end
 		end,
 	})
 
