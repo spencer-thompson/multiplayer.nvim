@@ -426,7 +426,7 @@ function M.share_buf(bufnr)
 		-- group = M.group, -- invalid group
 		buffer = connected_bufnr,
 		-- command = "set nomodified",
-		command = 'lua Multiplayer.coop.join_sync_buf("0") | set nomodified',
+		command = "lua Multiplayer.coop.join_sync_buf(0)",
 	})
 
 	vim.api.nvim_create_autocmd("BufWritePost", {
@@ -469,6 +469,8 @@ end
 -- Client calls to sync from the host
 function M.join_sync_buf(bufnr)
 	bufnr = bufnr or 0
+
+	vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
 
 	local connected_bufnr = vim.api.nvim_buf_get_var(bufnr, "multiplayer_bufnr")
 
