@@ -29,13 +29,13 @@ function M.init()
 		client_number = nil,
 	}
 
-	vim.api.nvim_create_autocmd("VimLeavePre", {
-		desc = "Clear Autocmds",
-		pattern = "*",
-		callback = function()
-			vim.api.nvim_clear_autocmds({ group = M.group })
-		end,
-	})
+	-- vim.api.nvim_create_autocmd("VimLeavePre", {
+	-- 	desc = "Clear Autocmds",
+	-- 	pattern = "*",
+	-- 	callback = function()
+	-- 		vim.api.nvim_clear_autocmds({ group = M.group })
+	-- 	end,
+	-- })
 end
 
 -- This will eventually replace plenary
@@ -181,19 +181,19 @@ function M.test_track_edits(bufnr)
 	})
 end
 
-function M.cleanup()
-	vim.api.nvim_create_autocmd("VimLeavePre", {
-		desc = "Disconnect Client",
-		pattern = "*",
-		callback = function()
-			vim.rpcnotify(M.channel, "nvim_exec_lua", { M.client_number })
-		end,
-	})
-end
-
-function M.disconnect(clientnr)
-	M.connected = false
-end
+-- function M.cleanup()
+-- 	vim.api.nvim_create_autocmd("VimLeavePre", {
+-- 		desc = "Disconnect Client",
+-- 		pattern = "*",
+-- 		callback = function()
+-- 			vim.rpcnotify(M.channel, "nvim_exec_lua", { M.client_number })
+-- 		end,
+-- 	})
+-- end
+--
+-- function M.disconnect(clientnr)
+-- 	M.connected = false
+-- end
 
 function M.host(port)
 	M.init()
@@ -285,7 +285,7 @@ function M.on_connect(role)
 	)
 
 	M.active = true
-	M.connected = true
+	-- M.connected = true
 end
 
 function M.render_cursor(bufnr, letter, mode, vmarks)
@@ -379,9 +379,9 @@ function M.share_buf(bufnr)
 		buffer = bufnr,
 		group = M.group,
 		callback = function()
-			if M.connected then
-				M.host_sync_buf(bufnr)
-			end
+			-- if M.connected then
+			M.host_sync_buf(bufnr)
+			-- end
 		end,
 	})
 

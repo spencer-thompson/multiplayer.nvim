@@ -73,6 +73,7 @@ function M.start(role, ticket)
 		desc = "Cleanup Comms",
 		pattern = "*",
 		callback = function()
+			vim.fn.chanclose(M.channel)
 			uv.process_kill(M.handle, "sigterm")
 		end,
 	})

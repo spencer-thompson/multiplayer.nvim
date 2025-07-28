@@ -17,6 +17,12 @@
 },
 ```
 
+- vim-plug:
+
+```vim
+Plug 'spencer-thompson/multiplayer.nvim', { 'do': 'cd comms && cargo build --release' }
+```
+
 ## Usage
 
 `:Coop host`
