@@ -391,12 +391,14 @@ function M.host_sync_buf(bufnr)
 	local clientnr = M.client_number
 	-- vim.rpcrequest(M.channel, "nvim_buf_set_lines", connected_bufnr, 0, -1, false, all_lines)
 
-	vim.rpcrequest(
-		M.channel,
-		"nvim_exec_lua",
-		[[return Multiplayer.coop.apply_edits(...)]],
-		{ all_lines, connected_bufnr, 0, -1, clientnr }
-	)
+	if M.active then
+		vim.rpcrequest(
+			M.channel,
+			"nvim_exec_lua",
+			[[return Multiplayer.coop.apply_edits(...)]],
+			{ all_lines, connected_bufnr, 0, -1, clientnr }
+		)
+	end
 end
 
 -- Client calls to sync from the host
