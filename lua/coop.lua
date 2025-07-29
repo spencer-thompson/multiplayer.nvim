@@ -31,7 +31,7 @@ function M.init()
 		desc = "Clear Autocmds",
 		pattern = "*",
 		callback = function()
-			vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.disconnect()]])
+			vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.disconnect()]], {})
 			vim.api.nvim_del_augroup_by_id(M.group)
 			vim.fn.chanclose(M.channel)
 			-- vim.api.nvim_clear_autocmds({ group = M.group })
