@@ -1,6 +1,6 @@
--- Essentially there need to be two autocmds:
--- + one for cursors (location)
--- + one for buffer updates
+-- COOP Code
+-- This is where the code to connect two clients live
+-- One `host` and one `join`
 
 local state = require("state")
 
@@ -18,29 +18,14 @@ function M.init()
 	M.client_number = 1
 	M.username = state.config.username
 	M.last_edit = {
-		content = nil,
-		flc = nil,
-		llc = nil,
-		llu = nil,
-		buf = nil,
-		line_count = nil,
+		-- content = nil,
+		-- flc = nil,
+		-- llc = nil,
+		-- llu = nil,
+		-- buf = nil,
+		-- line_count = nil,
 		client_number = nil,
 	}
-
-	vim.api.nvim_create_autocmd("VimLeavePre", {
-		desc = "Clear Autocmds",
-		pattern = "*",
-		callback = function()
-			vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.disconnect()]], {})
-			vim.api.nvim_del_augroup_by_id(M.group)
-			vim.fn.chanclose(M.channel)
-			-- vim.api.nvim_clear_autocmds({ group = M.group })
-		end,
-	})
-end
-
-function M.disconnect()
-	M.active = false
 end
 
 function M.track_cursor()
@@ -95,7 +80,6 @@ function M.track_edits(bufnr)
 				-- vim.print({ cgt, flc, llc, llu, bcp })
 				local content = vim.api.nvim_buf_get_lines(buf, flc, llu, false)
 				-- vim.rpcnotify(M.channel, "nvim_buf_set_lines", 0, flc, llc, false, content)
-				-- local line_count = vim.api.nvim_buf_get
 				local line_count = vim.api.nvim_buf_line_count(buf)
 
 				-- M.last_edit = {
@@ -118,7 +102,6 @@ function M.track_edits(bufnr)
 					[[return Multiplayer.coop.apply_edits(...)]],
 					{ content, remote_bufnr, flc, llc, clientnr }
 				)
-				-- M.last_edit.client_number
 			end
 
 			-- vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
@@ -170,19 +153,22 @@ function M.test_track_edits(bufnr)
 	})
 end
 
--- function M.cleanup()
--- 	vim.api.nvim_create_autocmd("VimLeavePre", {
--- 		desc = "Disconnect Client",
--- 		pattern = "*",
--- 		callback = function()
--- 			vim.rpcnotify(M.channel, "nvim_exec_lua", { M.client_number })
--- 		end,
--- 	})
--- end
---
--- function M.disconnect(clientnr)
--- 	M.connected = false
--- end
+function M.cleanup()
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		desc = "Disconnect Client",
+		pattern = "*",
+		callback = function()
+			vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.disconnect()]], {})
+			vim.api.nvim_del_augroup_by_id(M.group)
+			vim.fn.chanclose(M.channel)
+			-- vim.api.nvim_clear_autocmds({ group = M.group })
+		end,
+	})
+end
+
+function M.disconnect()
+	M.active = false
+end
 
 function M.host(port)
 	M.init()
@@ -191,8 +177,6 @@ function M.host(port)
 
 	-- local address = vim.fn.serverstart("0.0.0.0:" .. port)
 	local address = vim.fn.serverstart("0.0.0.0:" .. Multiplayer.comms.port)
-
-	-- dumbpipe:start()
 
 	vim.api.nvim_create_autocmd("ChanInfo", {
 		desc = "Detect New Client",
@@ -213,9 +197,6 @@ function M.host(port)
 		end,
 	})
 
-	-- M.dumbpipe = dumbpipe
-
-	-- M.cleanup()
 	M.track_cursor()
 
 	vim.print(address)
@@ -237,17 +218,12 @@ function M.join(ticket, port)
 
 		M.on_connect("join")
 
-		-- M.dumbpipe = dumbpipe
-
-		-- M.cleanup()
 		M.track_cursor()
 	end, 5000)
 end
 
 function M.on_connect(role)
-	-- M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
-	-- M.username = vim.trim(M.username)
-	M.notify_send(M.channel, "Connected")
+	M.notify_send(M.channel, "Connected with " .. M.username)
 
 	vim.rpcrequest(
 		M.channel,
@@ -260,6 +236,8 @@ function M.on_connect(role)
 	)
 
 	M.active = true
+
+	M.cleanup()
 	-- M.connected = true
 end
 
@@ -279,7 +257,7 @@ function M.render_cursor(bufnr, letter, mode, vmarks)
 
 		-- vim.api.nvim_buf_clear_namespace(bufnr, M.ns_id, 0, -1)
 		vim.api.nvim_buf_clear_namespace(bufnr, M.vns_id, 0, -1)
-		if mode == "n" then
+		if mode == "n" or mode == "i" then
 			vim.api.nvim_buf_del_extmark(bufnr, M.ns_id, M.channel + 1)
 		end
 		vim.api.nvim_buf_set_extmark(bufnr, M.ns_id, markpos[1] - 1, markpos[2], {
@@ -382,14 +360,12 @@ function M.host_sync_buf(bufnr)
 	bufnr = bufnr or 0
 
 	-- function M.apply_edits(lines, buf, flc, llc, clientnr)
-	--
 
 	local connected_bufnr = vim.api.nvim_buf_get_var(bufnr, "multiplayer_bufnr")
 
 	-- set all the lines in the new buffer
 	local all_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 	local clientnr = M.client_number
-	-- vim.rpcrequest(M.channel, "nvim_buf_set_lines", connected_bufnr, 0, -1, false, all_lines)
 
 	if M.active then
 		vim.rpcrequest(
@@ -415,28 +391,6 @@ function M.join_sync_buf(bufnr)
 	end
 
 	vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
-end
-
--- takes a table as an argument with the keys
--- type = "lines" | "bytes"
--- start_row
--- start_col
--- end_row
--- end_col
--- content
--- NOTE: unused
-function M.apply_edit(edit)
-	-- this is definitely not done
-	if edit.type == "lines" then
-		local content = vim.api.nvim_buf_get_lines(0, edit.start_row, edit.end_row, false)
-		local line_count = vim.api.nvim_buf_line_count(0)
-		if content == edit.content and line_count == edit.line_count then
-			return
-		end
-		if content ~= edit.content and line_count == edit.line_count then
-			vim.api.nvim_buf_set_lines(0, edit.start_row, edit.end_row, false, edit.content)
-		end
-	end
 end
 
 function M.send()

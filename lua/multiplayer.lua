@@ -6,28 +6,12 @@ Multiplayer.curpos = { 1, 1 }
 
 Multiplayer.cursor_ns_id = vim.api.nvim_create_namespace("MultiplayerCursor")
 
-Multiplayer.mark_options = { "a", "s", "d", "f" }
 Multiplayer.used_marks = {}
 Multiplayer.players = {}
-
--- Multiplayer.coop = require("coop")
---
--- Multiplayer.rust = require("rust")
--- Multiplayer.comms = require("comms")
 
 local state = require("state")
 
 -- Multiplayer.channel = nil
-
-Multiplayer.next_unused_mark = function()
-	for _, m in ipairs(Multiplayer.mark_options) do
-		if not Multiplayer.used_marks[m] then
-			Multiplayer.used_marks[m] = true
-			return m
-		end
-	end
-	return nil
-end
 
 Multiplayer.setup = function(opts)
 	state.config = vim.tbl_deep_extend("force", state.config, opts or {})
@@ -43,20 +27,6 @@ Multiplayer.setup = function(opts)
 	Multiplayer.coop = require("coop")
 	Multiplayer.rust = require("rust")
 	Multiplayer.comms = require("comms")
-	-- Multiplayer.socket_address = vim.fn.serverstart("websocket")
-
-	-- highlight groups | see :h guifg
-	-- vim.api.nvim_set_hl(0, "MultiplayerCursor", { link = "Cursor" })
-	vim.api.nvim_set_hl(0, "MultiplayerCursor", { bg = "green" })
-	vim.api.nvim_set_hl(Multiplayer.cursor_ns_id, "MultiplayerCursor1", { fg = "white", bg = "white" })
-	vim.api.nvim_set_hl(Multiplayer.cursor_ns_id, "MultiplayerCursor2", { fg = "NvimLightCyan" })
-	vim.api.nvim_set_hl(Multiplayer.cursor_ns_id, "MultiplayerCursor3", { fg = "NvimLightGreen" })
-	vim.api.nvim_set_hl(Multiplayer.cursor_ns_id, "MultiplayerCursor4", { fg = "NvimLightMagenta" })
-	vim.api.nvim_set_hl(Multiplayer.cursor_ns_id, "MultiplayerCursor5", { fg = "NvimLightRed" })
-	vim.api.nvim_set_hl(Multiplayer.cursor_ns_id, "MultiplayerCursor6", { fg = "NvimLightYellow" })
-
-	-- Multiplayer.username = vim.api.nvim_cmd({ "git", "config", "user.name" }, { output = true })
-	--
 
 	-- DUMBPIPE
 	vim.api.nvim_create_user_command("Coop", function(args)
@@ -320,10 +290,6 @@ end
 -- 	end
 -- end
 -- end
-
-Multiplayer.updates_to_server = function() end
-
-Multiplayer.updates_to_client = function() end
 
 Multiplayer.updates = function(username)
 	vim.rpcrequest(Multiplayer[username].id, "nvim_buf_attach", Multiplayer[username].buf, false, {

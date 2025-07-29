@@ -140,13 +140,13 @@ fn get_or_create_secret() -> anyhow::Result<SecretKey> {
         Ok(secret) => SecretKey::from_str(&secret).context("invalid secret"),
         Err(_) => {
             // eprintln!("Need to use IROH_SECRET")
-            panic!("Need environment variable: IROH_SECRET")
-            // let key = SecretKey::generate(rand::rngs::OsRng);
+            let key = SecretKey::generate(rand::rngs::OsRng);
+            eprintln!("IROH_SECRET={key}");
             // eprintln!(
             //     "using secret key {}",
             //     data_encoding::HEXLOWER.encode(&key.to_bytes())
             // );
-            // Ok(key)
+            Ok(key)
         }
     }
 }
@@ -220,7 +220,7 @@ async fn join_tcp(args: JoinArgs) -> anyhow::Result<()> {
         endpoint: Endpoint,
         alpn: &[u8],
     ) -> anyhow::Result<()> {
-        let (tcp_stream, tcp_addr) = next.context("error accepting tcp connection")?;
+        let (tcp_stream, _tcp_addr) = next.context("error accepting tcp connection")?;
         let (tcp_recv, tcp_send) = tcp_stream.into_split();
         // tracing::info!("got tcp connection from {}", tcp_addr);
         let remote_node_id = addr.node_id;
