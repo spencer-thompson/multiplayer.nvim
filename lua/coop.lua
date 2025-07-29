@@ -31,11 +31,16 @@ function M.init()
 		desc = "Clear Autocmds",
 		pattern = "*",
 		callback = function()
+			vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.disconnect()]])
 			vim.api.nvim_del_augroup_by_id(M.group)
 			vim.fn.chanclose(M.channel)
 			-- vim.api.nvim_clear_autocmds({ group = M.group })
 		end,
 	})
+end
+
+function M.disconnect()
+	M.active = false
 end
 
 function M.track_cursor()
@@ -400,10 +405,12 @@ function M.join_sync_buf(bufnr)
 
 	local connected_bufnr = vim.api.nvim_buf_get_var(bufnr, "multiplayer_bufnr")
 
-	local all_lines = vim.rpcrequest(M.channel, "nvim_buf_get_lines", connected_bufnr, 0, -1, false)
+	if M.active then
+		local all_lines = vim.rpcrequest(M.channel, "nvim_buf_get_lines", connected_bufnr, 0, -1, false)
 
-	M.last_edit.client_number = -1
-	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, all_lines)
+		M.last_edit.client_number = -1
+		vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, all_lines)
+	end
 
 	vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
 end
