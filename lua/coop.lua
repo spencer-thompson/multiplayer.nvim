@@ -34,7 +34,8 @@ function M.init()
 		pattern = "*",
 		callback = function()
 			vim.fn.chanclose(M.channel)
-			vim.api.nvim_clear_autocmds({ group = M.group })
+			vim.api.nvim_del_augroup_by_id(M.group)
+			-- vim.api.nvim_clear_autocmds({ group = M.group })
 		end,
 	})
 end
