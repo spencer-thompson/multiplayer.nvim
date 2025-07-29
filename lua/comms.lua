@@ -72,7 +72,7 @@ function M.start(role, ticket)
 		end
 	end)
 
-	vim.api.nvim_create_autocmd("VimLeavePre", {
+	vim.api.nvim_create_autocmd("VimLeave", {
 		desc = "Cleanup Comms",
 		pattern = "*",
 		callback = function()

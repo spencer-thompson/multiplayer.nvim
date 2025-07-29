@@ -2,8 +2,6 @@
 -- + one for cursors (location)
 -- + one for buffer updates
 
-local uv = vim.uv
-
 local state = require("state")
 
 local M = {}
@@ -33,8 +31,8 @@ function M.init()
 		desc = "Clear Autocmds",
 		pattern = "*",
 		callback = function()
-			vim.fn.chanclose(M.channel)
 			vim.api.nvim_del_augroup_by_id(M.group)
+			vim.fn.chanclose(M.channel)
 			-- vim.api.nvim_clear_autocmds({ group = M.group })
 		end,
 	})
