@@ -10,10 +10,10 @@ Multiplayer.mark_options = { "a", "s", "d", "f" }
 Multiplayer.used_marks = {}
 Multiplayer.players = {}
 
-Multiplayer.coop = require("coop")
-
-Multiplayer.rust = require("rust")
-Multiplayer.comms = require("comms")
+-- Multiplayer.coop = require("coop")
+--
+-- Multiplayer.rust = require("rust")
+-- Multiplayer.comms = require("comms")
 
 local state = require("state")
 
@@ -39,6 +39,10 @@ Multiplayer.setup = function(opts)
 	-- vim.print(state)
 
 	_G.Multiplayer = Multiplayer
+
+	Multiplayer.coop = require("coop")
+	Multiplayer.rust = require("rust")
+	Multiplayer.comms = require("comms")
 	-- Multiplayer.socket_address = vim.fn.serverstart("websocket")
 
 	-- highlight groups | see :h guifg
