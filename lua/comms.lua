@@ -5,9 +5,12 @@ local M = {}
 M.group = vim.api.nvim_create_augroup("Comms", { clear = true })
 
 local bin = {
-	path = "dumbpipe", -- will change to Multiplayer.rust.comms.path
-	host_args = { "listen-tcp", "--host" },
-	join_args = { "connect-tcp", "--addr" },
+	-- path = "dumbpipe", -- will change to Multiplayer.rust.comms.path
+	path = Multiplayer.rust.comms.path,
+	-- host_args = { "listen-tcp", "--host" },
+	host_args = { "host", "--addr" },
+	-- join_args = { "connect-tcp", "--addr" },
+	join_args = { "join", "--addr" },
 	-- dumbpipe = {
 	-- 	path = "dumbpipe",
 	-- 	args = {},
@@ -73,7 +76,7 @@ function M.start(role, ticket)
 		desc = "Cleanup Comms",
 		pattern = "*",
 		callback = function()
-			vim.fn.chanclose(M.channel)
+			-- vim.fn.chanclose(M.channel)
 			uv.process_kill(M.handle, "sigterm")
 		end,
 	})

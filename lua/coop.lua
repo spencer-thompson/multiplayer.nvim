@@ -29,29 +29,14 @@ function M.init()
 		client_number = nil,
 	}
 
-	-- vim.api.nvim_create_autocmd("VimLeavePre", {
-	-- 	desc = "Clear Autocmds",
-	-- 	pattern = "*",
-	-- 	callback = function()
-	-- 		vim.api.nvim_clear_autocmds({ group = M.group })
-	-- 	end,
-	-- })
-end
-
--- This will eventually replace plenary
-function M.start_connection_process(port)
-	local handle, pid = uv.spawn("dumbpipe", {
-		args = { "listen-tcp", "--host", "0.0.0.0:" .. port },
-	}, function(code, signal) -- on exit
-		print("exit code", code)
-		print("exit signal", signal)
-	end)
-
-	M.process_handle = handle
-end
-
-function M.end_connection_process()
-	local result = uv.process_kill(M.process_handle, "sigterm")
+	vim.api.nvim_create_autocmd("VimLeavePre", {
+		desc = "Clear Autocmds",
+		pattern = "*",
+		callback = function()
+			vim.fn.chanclose(M.channel)
+			vim.api.nvim_clear_autocmds({ group = M.group })
+		end,
+	})
 end
 
 function M.track_cursor()
@@ -253,25 +238,11 @@ function M.join(ticket, port)
 		-- M.cleanup()
 		M.track_cursor()
 	end, 5000)
-
-	-- local chan = vim.fn.sockconnect("tcp", address, { rpc = true })
-	--
-	-- M.channel = chan
-	--
-	-- M.on_connect("join")
-	--
-	-- M.dumbpipe = dumbpipe
-	--
-	-- M.cleanup()
-	-- M.track_cursor()
-	--
-	-- return chan
 end
 
 function M.on_connect(role)
 	-- M.username = vim.system({ "git", "config", "user.name" }, { text = true }):wait().stdout
 	-- M.username = vim.trim(M.username)
-	--
 	M.notify_send(M.channel, "Connected")
 
 	vim.rpcrequest(
@@ -414,7 +385,7 @@ function M.host_sync_buf(bufnr)
 	-- set all the lines in the new buffer
 	local all_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 	local clientnr = M.client_number
-	vim.rpcrequest(M.channel, "nvim_buf_set_lines", connected_bufnr, 0, -1, false, all_lines)
+	-- vim.rpcrequest(M.channel, "nvim_buf_set_lines", connected_bufnr, 0, -1, false, all_lines)
 
 	vim.rpcrequest(
 		M.channel,
@@ -467,14 +438,6 @@ end
 
 function M.notify_send(channel, msg)
 	vim.rpcnotify(channel, "nvim_echo", { { msg } }, true, {})
-	-- vim.api.nvim_echo({ { "chunk1-line1\nchunk1-line2\n" }, { "chunk2-line1" } }, true, {})
-	-- vim.rpcnotify(
-	-- 	channel,
-	-- 	"nvim_exec_lua",
-	-- 	[[return Multiplayer.send_marks(...)]],
-	-- 	{ Multiplayer.username, Multiplayer.cursor_ns_id, "MultiplayerCursor" }
-	-- )
-	-- vim.notify(msg)
 end
 
 function M.test_connection(channel)
