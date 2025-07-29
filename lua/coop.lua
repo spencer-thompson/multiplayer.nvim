@@ -50,7 +50,7 @@ function M.track_cursor()
 			if ok and res then
 				-- if vim.api.nvim_buf_get_var(ev.buf, "sharing") then
 				local ok, connected_bufnr = pcall(vim.api.nvim_buf_get_var, ev.buf, "multiplayer_bufnr")
-				if ok then
+				if ok and M.active then
 					local curpos = vim.api.nvim_win_get_cursor(0)
 
 					local mark_letter = string.sub(M.username, 1, 1):lower()
