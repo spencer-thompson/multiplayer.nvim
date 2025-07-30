@@ -223,7 +223,7 @@ function M.join(ticket, port)
 end
 
 function M.on_connect(role)
-	M.notify_send(M.channel, "Connected with " .. M.username)
+	M.notify_send(M.channel, "Connected")
 
 	vim.rpcrequest(
 		M.channel,
