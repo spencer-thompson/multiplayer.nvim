@@ -49,11 +49,12 @@ function M.start(role, ticket)
 		args = comms_args,
 		stdio = { stdin, stdout, stderr },
 	}, function(code, signal)
-		vim.print("exit code", code)
-		vim.print("exit signal", signal)
+		-- vim.print("exit code", code)
+		-- vim.print("exit signal", signal)
+		vim.notify("Comms Exited, Code: [" .. code .. "], Signal: [" .. signal .. "]", vim.log.levels.ERROR)
 	end)
 
-	vim.print("Started Comms")
+	vim.notify("Started Comms")
 
 	uv.read_start(stderr, function(err, data)
 		if data then

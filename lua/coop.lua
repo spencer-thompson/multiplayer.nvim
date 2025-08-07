@@ -187,7 +187,7 @@ function M.host(port)
 			for _, client in ipairs(all_clients) do
 				if client.client and client.client.name then
 					if client.client.name == "Multiplayer" then
-						vim.print("Connected")
+						vim.notify("Coop Connected")
 						M.channel = client.id
 						-- M.active = true
 						M.on_connect("host")
@@ -199,7 +199,7 @@ function M.host(port)
 
 	M.track_cursor()
 
-	vim.print(address)
+	-- vim.print(address)
 	return address
 end
 
@@ -213,7 +213,7 @@ function M.join(ticket, port)
 	vim.defer_fn(function()
 		local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. Multiplayer.comms.port, { rpc = true })
 		-- local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. port, { rpc = true })
-		vim.print(chan)
+		-- vim.print(chan)
 		M.channel = chan
 
 		M.on_connect("join")
