@@ -205,7 +205,6 @@ function M.host(port)
 
 	M.track_cursor()
 
-	-- vim.print(address)
 	return address
 end
 
@@ -219,7 +218,6 @@ function M.join(ticket, port)
 	vim.defer_fn(function()
 		local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. Multiplayer.comms.port, { rpc = true })
 		-- local chan = vim.fn.sockconnect("tcp", "0.0.0.0:" .. port, { rpc = true })
-		-- vim.print(chan)
 		M.channel = chan
 
 		M.on_connect("join")
