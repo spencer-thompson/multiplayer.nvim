@@ -13,6 +13,7 @@ M.vns_id = vim.api.nvim_create_namespace("MultiplayerCursorVisual")
 M.players = {}
 
 M.active = false
+M.connected_bufs = {}
 
 function M.init()
 	M.client_number = 1
@@ -167,7 +168,12 @@ function M.cleanup()
 end
 
 function M.disconnect()
+	-- vim.api.nvim_buf_clear_namespace(bufnr, M.vns_id, 0, -1)
 	M.active = false
+	for i, bufnr in ipairs(M.connected_bufs) do
+		vim.api.nvim_buf_clear_namespace(bufnr, M.vns_id, 0, -1)
+		vim.api.nvim_buf_clear_namespace(bufnr, M.ns_id, 0, -1)
+	end
 end
 
 function M.host(port)
@@ -308,6 +314,16 @@ end
 function M.share_buf(bufnr)
 	bufnr = bufnr or 0
 
+	local actual_bufnr = 0
+
+	if bufnr == 0 then
+		actual_bufnr = vim.api.nvim_get_current_buf()
+	else
+		actual_bufnr = bufnr
+	end
+
+	table.insert(M.connected_bufs, actual_bufnr)
+
 	local filetype = vim.api.nvim_get_option_value("filetype", { buf = bufnr })
 	local full_filename = vim.api.nvim_buf_get_name(bufnr)
 	local base_filename = vim.fs.basename(full_filename)
@@ -318,25 +334,6 @@ function M.share_buf(bufnr)
 	vim.rpcrequest(M.channel, "nvim_set_option_value", "buftype", "acwrite", { buf = connected_bufnr })
 	vim.rpcrequest(M.channel, "nvim_set_option_value", "filetype", filetype, { buf = connected_bufnr })
 	vim.rpcrequest(M.channel, "nvim_buf_set_name", connected_bufnr, base_filename)
-
-	vim.rpcrequest(M.channel, "nvim_create_autocmd", "BufWriteCmd", {
-		desc = "Sharing " .. base_filename,
-		-- group = M.group, -- invalid group
-		buffer = connected_bufnr,
-		-- command = "set nomodified",
-		command = "lua Multiplayer.coop.join_sync_buf(0)",
-	})
-
-	vim.api.nvim_create_autocmd("BufWritePost", {
-		desc = "Sync Buffer on Write",
-		buffer = bufnr,
-		group = M.group,
-		callback = function()
-			-- if M.connected then
-			M.host_sync_buf(bufnr)
-			-- end
-		end,
-	})
 
 	-- set all the lines in the new buffer
 	local all_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
@@ -350,6 +347,25 @@ function M.share_buf(bufnr)
 
 	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "sharing", true)
 	vim.rpcrequest(M.channel, "nvim_buf_set_var", connected_bufnr, "multiplayer_bufnr", bufnr)
+
+	vim.rpcrequest(M.channel, "nvim_create_autocmd", "BufWriteCmd", {
+		desc = "Sharing " .. base_filename,
+		-- group = M.group, -- invalid group
+		buffer = connected_bufnr,
+		-- command = "set nomodified",
+		command = "lua Multiplayer.coop.join_sync_buf(" .. connected_bufnr .. ")",
+	})
+
+	vim.api.nvim_create_autocmd("BufWritePost", {
+		desc = "Sync Buffer on Write",
+		buffer = bufnr,
+		group = M.group,
+		callback = function()
+			-- if M.connected then
+			M.host_sync_buf(bufnr)
+			-- end
+		end,
+	})
 
 	M.track_edits(bufnr)
 	vim.rpcnotify(M.channel, "nvim_exec_lua", [[return Multiplayer.coop.track_edits(...)]], { connected_bufnr })
