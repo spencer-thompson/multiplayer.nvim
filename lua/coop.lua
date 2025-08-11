@@ -135,25 +135,6 @@ function M.apply_edits(lines, buf, flc, llc, clientnr)
 	vim.api.nvim_buf_set_lines(buf, flc, llc, false, lines)
 end
 
-function M.test_track_edits(bufnr)
-	vim.api.nvim_buf_attach(bufnr, false, {
-		-- I need to track users
-		on_lines = function(lines, buf, changedtick, flc, llc, llu, bcp)
-			vim.print({
-				-- lines,
-				-- buf,
-				-- changedtick,
-				flc,
-				llc,
-				llu,
-				-- bcp
-				vim.api.nvim_buf_get_lines(0, flc, llc, false),
-				vim.api.nvim_buf_get_lines(0, flc, llu, false),
-			})
-		end,
-	})
-end
-
 function M.cleanup()
 	vim.api.nvim_create_autocmd("VimLeavePre", {
 		desc = "Disconnect Client",
@@ -407,9 +388,8 @@ function M.join_sync_buf(bufnr)
 	vim.api.nvim_set_option_value("modified", false, { buf = bufnr })
 end
 
-function M.send()
-	local message = vim.fn.input("Send a message...")
-	vim.rpcnotify(M.channel, "nvim_echo", { { message } }, true, {})
+function M.send(content)
+	vim.rpcnotify(M.channel, "nvim_echo", { { content } }, true, {})
 end
 
 function M.notify_send(channel, msg)
