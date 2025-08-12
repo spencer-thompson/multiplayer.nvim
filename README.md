@@ -7,6 +7,7 @@
 
 ## Install
 
+
 - Lazy:
 
 ```lua
@@ -23,6 +24,10 @@
 Plug 'spencer-thompson/multiplayer.nvim', { 'do': 'cd comms && cargo build --release' }
 lua require("multiplayer").setup({})
 ```
+
+### Dependencies
+
+`cargo`
 
 ## Usage
 
