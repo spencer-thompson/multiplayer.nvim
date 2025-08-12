@@ -21,13 +21,31 @@
 
 ```vim
 Plug 'spencer-thompson/multiplayer.nvim', { 'do': 'cd comms && cargo build --release' }
+lua require("multiplayer").setup({})
 ```
 
 ## Usage
 
+### Coop
+
+Shared buffers for the joining client only exist in memory.
+Saving a buffer that is shared will synchronize the buffer with the host.
+
 `:Coop host`
 
 `:Coop join`
+
+## Configuration
+
+The plugin is built to work fine out of the box, although the available config options are below:
+
+```lua
+{
+  username = "my_username", -- default is git username
+  uppercase_marks = true,   -- use uppercase (global) marks
+}
+```
+
 
 ## Overview
 

@@ -1,10 +1,8 @@
 local Multiplayer = {}
 
-local state = require("state")
-
--- Multiplayer.channel = nil
-
 Multiplayer.setup = function(opts)
+	local state = require("state")
+
 	state.config = vim.tbl_deep_extend("force", state.config, opts or {})
 
 	-- Setup username from config or get git username
@@ -69,5 +67,14 @@ Multiplayer.setup = function(opts)
 		end,
 	})
 end
+
+-- vim.api.nvim_create_user_command("Multiplayer", function(args)
+--
+-- end, {
+-- 	nargs = "*",
+-- 	complete = function(ArgLead, CmdLine, CursorPos)
+-- 		return { "host", "join", "send", "share" }
+-- 	end,
+-- })
 
 return Multiplayer

@@ -232,6 +232,10 @@ function M.render_cursor(bufnr, letter, mode, vmarks)
 	if vim.api.nvim_buf_get_var(bufnr, "sharing") then
 		letter = letter or "p"
 
+		if state.config.uppercase_marks then
+			letter = string.upper(letter)
+		end
+
 		local markpos = vim.api.nvim_buf_get_mark(bufnr, letter)
 
 		-- local markpos = curpos
